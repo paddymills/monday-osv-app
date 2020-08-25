@@ -1,0 +1,45 @@
+@import "monday-design/main.css";
+
+.TextBox {
+  border: 1px solid var(--wolfgrey);
+}
+
+.small {
+  height: 32px;
+  padding: 0 8px;
+}
+
+.medium {
+  height: 40px;
+  padding: 0 8px;
+}
+
+.large {
+  height: 48px;
+  padding: 0 16px
+}
+
+.TextBox:hover {
+  border-color: var(--dark);
+}
+
+.TextBox:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+.TextBox:disabled {
+  background-color: var(--wolfgrey);
+}
+
+.TextBox:disabled:hover {
+  border-color: var(--wolfgrey);
+}
+
+.TextBox.error {
+  border-color: var(--private);
+}
+
+.TextBox.success {
+  border-color: var(--green);
+}
