@@ -1,6 +1,6 @@
 import React from "react";
 import "./App.scss";
-import updateTimelines from "./timeline.js";
+import { updateTimelines, updateTimeline } from "./timeline.js";
 import mondaySdk from "monday-sdk-js";
 const monday = mondaySdk();
 
@@ -10,11 +10,13 @@ class App extends React.Component {
 
     // Default state
     this.state = {
-      name: "monday apps",
       settings: {},
       context: {},
+      last_change: {},
       status: "",
     };
+
+    this.timeline_depends_on = [];
   }
 
   componentDidMount() {
@@ -36,6 +38,17 @@ class App extends React.Component {
         }
       });
 
+      // set timeline dependent columns
+      this.timeline_depends_on = [
+        res.data.ship_date_column,
+        res.data.vendor2_column,
+      ]
+
+      // convert numeric values
+      res.data.vendor1_days = Number(res.data.vendor1_days)
+      res.data.vendor2_days = Number(res.data.vendor2_days)
+      res.data.extra_days = Number(res.data.extra_days)
+
       this.setState({
         settings: res.data,
         status: "settings updated",
@@ -46,6 +59,14 @@ class App extends React.Component {
         context: res.data,
         status: "context updated",
       })
+    });
+    monday.listen("events", res => {
+      this.setState({
+        last_change: res.data,
+        status: "context updated: " + res.data.columnId,
+      })
+
+      this.handleUpdate(res);
     });
   }
 
@@ -66,13 +87,21 @@ class App extends React.Component {
     this.setState({ status: "sync clicked" });
   }
 
+  handleUpdate(res) {
+    if (this.timeline_depends_on.includes(res.data.columnId)) {
+      updateTimeline(this.state.context.boardId, res.data.itemIds[0], this.state.settings)
+    }
+  }
+
   render() {
     return <div className="App" >
-      <h1> Hello, {this.state.name}!</h1>
+      <h1><u>Outside Vendor Services</u></h1>
       <button onClick={() => this.clickUpdateTimelines()}>Update Timelines</button>
       <button onClick={() => this.clickSyncVendors()}>Sync Vendors</button>
       <button onClick={() => this.clickAll()}>Run All</button>
       <p>Status: {this.state.status}</p>
+      <p>{JSON.stringify(this.state.last_change, null, 2)}</p>
+      <p>{JSON.stringify(this.timeline_depends_on, null, 2)}</p>
       <p>{JSON.stringify(this.state.settings, null, 2)}</p>
       <p>Board ID: {this.state.context.boardId}</p>
     </div>;

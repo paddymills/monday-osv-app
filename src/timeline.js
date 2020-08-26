@@ -6,7 +6,7 @@ const monday = mondaySdk();
 
 const DATE_FORMAT = "YYYY-MM-DD";
 
-export default async function updateTimelines(boardId, cfg) {
+async function updateTimelines(boardId, cfg) {
   const data = await getTimelines(
     boardId,
     cfg.active_group,
@@ -40,6 +40,33 @@ export default async function updateTimelines(boardId, cfg) {
   });
 };
 
+async function updateTimeline(boardId, itemId, cfg) {
+  const data = await getTimeline(
+    boardId,
+    itemId,
+    [
+      cfg.ship_date_column,
+      cfg.vendor2_column
+    ]
+  );
+
+  let vals = {};
+  data.column_values.forEach(col => {
+    vals[col.id] = col.value;
+  });
+
+  const date = JSON.parse(vals[cfg.ship_date_column])["date"];
+  const new_timeline = calculateTimeline(
+    date,
+    vals[cfg.vendor2_column],
+    cfg.vendor1_days,
+    cfg.vendor2_days,
+    cfg.extra_days
+  );
+
+  changeColumnValue(boardId, itemId, cfg.timeline_column, new_timeline);
+};
+
 function calculateTimeline(ship_date, vendor2, vendor1_days, vendor2_days, extra_days) {
   let date = moment(ship_date);
 
@@ -62,7 +89,8 @@ function calculateTimeline(ship_date, vendor2, vendor1_days, vendor2_days, extra
 
 async function getTimelines(boardId, group, columns) {
   try {
-    const query = `query (
+    const query = `
+    query (
       $boardId: Int!,
       $group: String!,
       $columns: [String!]
@@ -95,6 +123,38 @@ async function getTimelines(boardId, group, columns) {
   }
 }
 
+async function getTimeline(boardId, itemId, columns) {
+  try {
+    const query = `
+    query (
+      $boardId: Int!,
+      $itemId: Int!,
+      $columns: [String!]
+    ) {
+      boards (ids: [$boardId]) {
+        items (ids: [$itemId]) {
+          column_values (ids: $columns) {
+            id,
+            value
+          }
+        }
+      }
+    }`;
+    const variables = {
+      boardId,
+      itemId,
+      columns
+    };
+
+    const response = await monday.api(query, { variables });
+
+    return response.data.boards[0].items[0];
+
+  } catch (err) {
+    console.log(err);
+  }
+}
+
 async function changeColumnValue(boardId, itemId, columnId, value) {
   try {
     const query = `
@@ -117,4 +177,9 @@ async function changeColumnValue(boardId, itemId, columnId, value) {
   } catch (err) {
     console.log(err);
   }
+}
+
+export {
+  updateTimeline,
+  updateTimelines
 }
