@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap");
 body {
   margin: 0;
   font-family: "Roboto", sans-serif;
@@ -13,9 +14,12 @@ body {
 }
 
 button {
+  font-family: "Roboto", sans-serif;
+  font-size: 16px;
   height: 40px;
-  min-width: 100px;
+  min-width: 150px;
   margin: 5px;
+  padding: 0 15px;
   border: none;
   background-color: #0085FF;
   color: #FFFFFF;
