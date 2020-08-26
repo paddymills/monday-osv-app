@@ -1,0 +1,27 @@
+body {
+  margin: 0;
+  font-family: "Roboto", sans-serif;
+}
+
+.App {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+button {
+  height: 40px;
+  min-width: 100px;
+  margin: 5px;
+  border: none;
+  background-color: #0085FF;
+  color: #FFFFFF;
+  border-radius: 500px;
+}
+
+button:hover {
+  background-color: #003566;
+}
