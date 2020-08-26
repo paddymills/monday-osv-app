@@ -12,6 +12,7 @@ class App extends React.Component {
       settings: {},
       context: {},
       name: "monday apps",
+      status: "",
     };
   }
 
@@ -28,17 +29,25 @@ class App extends React.Component {
     });
   }
 
+  clickAll() {
+    this.setState({ status: "all clicked" });
+  }
+
+  clickUpdate() {
+    this.setState({ status: "timeline clicked" });
+  }
+
+  clickSync() {
+    this.setState({ status: "sync clicked" });
+  }
+
   render() {
     return <div className="App" >
       <h1> Hello, {this.state.name}!</h1>
-      <button>All</button>
-      <button>Update Timelines</button>
-      <button>Sync Vendors</button>
-      <p> First Vendor Days: {this.state.settings.vendor1_days} </p>
-      <p> Second Vendor Days: {this.state.settings.vendor2_days} </p>
-      <p> Extra Days: {this.state.settings.extra_days} </p>
-      <p> {JSON.stringify(this.state.settings, null, 2)} </p>
-      <p> {JSON.stringify(this.state.context, null, 2)} </p>
+      <button onClick={() => this.clickAll()}>Run All</button>
+      <button onClick={() => this.clickUpdate()}>Update Timelines</button>
+      <button onClick={() => this.clickSync()}>Sync Vendors</button>
+      <p>Status: {this.state.status}</p>
     </div>;
   }
 }
