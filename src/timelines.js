@@ -1,9 +1,7 @@
 
-import mondaySdk from "monday-sdk-js";
 import mondayService from "./monday-service.js"
 
 var moment = require('moment');
-const monday = mondaySdk();
 
 const DATE_FORMAT = "YYYY-MM-DD";
 
