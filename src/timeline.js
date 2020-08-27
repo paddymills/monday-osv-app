@@ -6,8 +6,8 @@ const monday = mondaySdk();
 
 const DATE_FORMAT = "YYYY-MM-DD";
 
-async function updateTimelines(boardId, cfg) {
-  const data = await getTimelines(
+async function updateAll(boardId, cfg) {
+  const data = await getAll(
     boardId,
     cfg.active_group,
     [
@@ -20,51 +20,42 @@ async function updateTimelines(boardId, cfg) {
   data.forEach(element => {
     const id = Number(element.id);
 
-    let vals = {};
-    element.column_values.forEach(col => {
-      vals[col.id] = col.value;
-    });
-
-    const date = JSON.parse(vals[cfg.ship_date_column])["date"];
-    const new_timeline = calculateTimeline(
-      date,
-      vals[cfg.vendor2_column],
-      cfg.vendor1_days,
-      cfg.vendor2_days,
-      cfg.extra_days
-    );
-
-    if (new_timeline !== JSON.parse(vals[cfg.timeline_column])) {
-      changeColumnValue(boardId, id, cfg.timeline_column, new_timeline);
-    }
+    updateItem(boardId, id, element, cfg);
   });
 };
 
-async function updateTimeline(boardId, itemId, cfg) {
-  const data = await getTimeline(
+async function updateOne(boardId, itemId, cfg) {
+  const data = await getOne(
     boardId,
     itemId,
     [
       cfg.ship_date_column,
-      cfg.vendor2_column
+      cfg.vendor2_column,
+      cfg.timeline_column
     ]
   );
 
+  updateItem(boardId, itemId, data, cfg);
+}
+
+function updateItem(boardId, itemId, data, cfg) {
   let vals = {};
   data.column_values.forEach(col => {
-    vals[col.id] = col.value;
+    vals[col.id] = col;
   });
 
-  const date = JSON.parse(vals[cfg.ship_date_column])["date"];
+  const date = vals[cfg.ship_date_column].text;
   const new_timeline = calculateTimeline(
     date,
-    vals[cfg.vendor2_column],
+    vals[cfg.vendor2_column].text,
     cfg.vendor1_days,
     cfg.vendor2_days,
     cfg.extra_days
   );
 
-  changeColumnValue(boardId, itemId, cfg.timeline_column, new_timeline);
+  if (new_timeline !== JSON.parse(vals[cfg.timeline_column].value)) {
+    changeColumnValue(boardId, itemId, cfg.timeline_column, new_timeline);
+  }
 };
 
 function calculateTimeline(ship_date, vendor2, vendor1_days, vendor2_days, extra_days) {
@@ -87,7 +78,7 @@ function calculateTimeline(ship_date, vendor2, vendor1_days, vendor2_days, extra
   });
 }
 
-async function getTimelines(boardId, group, columns) {
+async function getAll(boardId, group, columns) {
   try {
     const query = `
     query (
@@ -102,7 +93,8 @@ async function getTimelines(boardId, group, columns) {
             id,
             column_values (ids: $columns) {
               id,
-              value
+              value,
+              text
             }
           }
         }
@@ -119,11 +111,17 @@ async function getTimelines(boardId, group, columns) {
     return response.data.boards[0].groups[0].items;
 
   } catch (err) {
+    monday.execute("notice", {
+      message: "Error executing GraphQL. Check console.",
+      type: "error",
+      timeout: 10000,
+    });
+
     console.log(err);
   }
 }
 
-async function getTimeline(boardId, itemId, columns) {
+async function getOne(boardId, itemId, columns) {
   try {
     const query = `
     query (
@@ -135,7 +133,8 @@ async function getTimeline(boardId, itemId, columns) {
         items (ids: [$itemId]) {
           column_values (ids: $columns) {
             id,
-            value
+            value,
+            text
           }
         }
       }
@@ -151,6 +150,12 @@ async function getTimeline(boardId, itemId, columns) {
     return response.data.boards[0].items[0];
 
   } catch (err) {
+    monday.execute("notice", {
+      message: "Error executing GraphQL. Check console.",
+      type: "error",
+      timeout: 10000,
+    });
+
     console.log(err);
   }
 }
@@ -175,11 +180,17 @@ async function changeColumnValue(boardId, itemId, columnId, value) {
     });
     return response;
   } catch (err) {
+    monday.execute("notice", {
+      message: "Error executing GraphQL. Check console.",
+      type: "error",
+      timeout: 10000,
+    });
+
     console.log(err);
   }
 }
 
-export {
-  updateTimeline,
-  updateTimelines
+export default {
+  updateOne,
+  updateAll
 }

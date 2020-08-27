@@ -1,6 +1,6 @@
 import React from "react";
 import "./App.scss";
-import { updateTimelines, updateTimeline } from "./timeline.js";
+import timeline from "./timeline.js";
 import mondaySdk from "monday-sdk-js";
 const monday = mondaySdk();
 
@@ -12,8 +12,6 @@ class App extends React.Component {
     this.state = {
       settings: {},
       context: {},
-      last_change: {},
-      status: "",
     };
 
     this.timeline_depends_on = [];
@@ -21,76 +19,98 @@ class App extends React.Component {
 
   componentDidMount() {
     monday.listen("settings", res => {
-      // flatten settings
-      // some values match pattern [key]: { "[value]": true }
-      // [key]: { "[value]": true } -> [key]: "[value]"
-      Object.keys(res.data).forEach(key => {
-        let value = res.data[key]
-
-        if (value instanceof Object) {            // value is an Object
-          let val_keys = Object.keys(value);
-
-          if (val_keys.length === 1) {            // value has only 1 key
-            if (value[val_keys[0]] === true) {    // value's value is true (needed to single out sync_columns)
-              res.data[key] = val_keys[0];
-            }
-          }
-        }
+      this.setState({
+        settings: this.processSettings(res.data),
       });
 
-      // set timeline dependent columns
-      this.timeline_depends_on = [
-        res.data.ship_date_column,
-        res.data.vendor2_column,
-      ]
-
-      // convert numeric values
-      res.data.vendor1_days = Number(res.data.vendor1_days)
-      res.data.vendor2_days = Number(res.data.vendor2_days)
-      res.data.extra_days = Number(res.data.extra_days)
-
-      this.setState({
-        settings: res.data,
-        status: "settings updated",
-      })
+      this.log("Settings updated", res.data);
     });
     monday.listen("context", res => {
       this.setState({
         context: res.data,
-        status: "context updated",
-      })
+      });
+
+      this.log("Context updated", res.data);
     });
     monday.listen("events", res => {
-      this.setState({
-        last_change: res.data,
-        status: "context updated: " + res.data.columnId,
-      })
-
       this.handleUpdate(res);
+
+      this.log("Event fired", res.data);
     });
+  }
+
+  handleUpdate(res) {
+    if (this.timeline_depends_on.includes(res.data.columnId)) {
+      timeline.updateOne(this.state.context.boardId, res.data.itemIds[0], this.state.settings);
+    }
+  }
+
+  log(subject, data) {
+    const date = new Date().toISOString();
+
+    console.log("[" + date + "] " + subject, data);
+  }
+
+  processSettings(data) {
+    // flatten settings
+    // some values match pattern [key]: { "[value]": true }
+    // [key]: { "[value]": true } -> [key]: "[value]"
+    Object.keys(data).forEach(key => {
+      let value = data[key]
+
+      if (value instanceof Object) {            // value is an Object
+        let val_keys = Object.keys(value);
+
+        if (val_keys.length === 1) {            // value has only 1 key
+          if (value[val_keys[0]] === true) {    // value's value is true (needed to single out sync_columns)
+            data[key] = val_keys[0];
+          }
+        }
+      }
+    });
+
+    // set timeline dependent columns
+    this.timeline_depends_on = [
+      data.ship_date_column,
+      data.vendor2_column,
+    ]
+
+    // convert numeric values
+    data.vendor1_days = Number(data.vendor1_days)
+    data.vendor2_days = Number(data.vendor2_days)
+    data.extra_days = Number(data.extra_days)
+
+    if (data.vendor1_days)
+
+      return data;
   }
 
   clickAll() {
     this.clickUpdateTimelines();
     this.clickSyncVendors();
 
-    this.setState({ status: "all clicked" });
+    monday.execute("notice", {
+      message: "Timelines updated & Vendor boards synced",
+      type: "success",
+    });
   }
 
   clickUpdateTimelines() {
-    updateTimelines(this.state.context.boardId, this.state.settings)
+    timeline.updateAll(this.state.context.boardId, this.state.settings);
 
-    this.setState({ status: "timeline clicked" });
+    monday.execute("notice", {
+      message: "Timelines updated",
+      type: "success",
+    });
   }
 
   clickSyncVendors() {
-    this.setState({ status: "sync clicked" });
-  }
 
-  handleUpdate(res) {
-    if (this.timeline_depends_on.includes(res.data.columnId)) {
-      updateTimeline(this.state.context.boardId, res.data.itemIds[0], this.state.settings)
-    }
+
+    monday.execute("notice", {
+      message: "Vendor boards synced",
+      type: "success",
+    });
   }
 
   render() {
@@ -99,11 +119,6 @@ class App extends React.Component {
       <button onClick={() => this.clickUpdateTimelines()}>Update Timelines</button>
       <button onClick={() => this.clickSyncVendors()}>Sync Vendors</button>
       <button onClick={() => this.clickAll()}>Run All</button>
-      <p>Status: {this.state.status}</p>
-      <p>{JSON.stringify(this.state.last_change, null, 2)}</p>
-      <p>{JSON.stringify(this.timeline_depends_on, null, 2)}</p>
-      <p>{JSON.stringify(this.state.settings, null, 2)}</p>
-      <p>Board ID: {this.state.context.boardId}</p>
     </div>;
   }
 }
