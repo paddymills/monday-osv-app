@@ -19,28 +19,64 @@ class App extends React.Component {
 
   componentDidMount() {
     monday.listen("settings", res => {
-      this.setState({
-        settings: this.processSettings(res.data),
-      });
-
-      this.log("Settings updated", res.data);
+      this.handleSettings(res);
     });
     monday.listen("context", res => {
-      this.setState({
-        context: res.data,
-      });
-
-      this.log("Context updated", res.data);
+      this.handleContext(res);
     });
     monday.listen("events", res => {
-      this.handleUpdate(res);
-
-      this.log("Event fired", res.data);
+      this.handleEvent(res);
     });
   }
 
-  handleUpdate(res) {
-    if (this.timeline_depends_on.includes(res.data.columnId)) {
+  handleSettings(res) {
+    this.log("Settings updated", res.data);
+
+    // flatten settings
+    // some values match pattern [key]: { "[value]": true }
+    // [key]: { "[value]": true } -> [key]: "[value]"
+    Object.keys(res.data).forEach(key => {
+      let value = res.data[key]
+
+      if (value instanceof Object) {            // value is an Object
+        let val_keys = Object.keys(value);
+
+        if (val_keys.length === 1) {            // value has only 1 key
+          if (value[val_keys[0]] === true) {    // value's value is true (needed to single out sync_columns)
+            res.data[key] = val_keys[0];
+          }
+        }
+      }
+    });
+
+    // set timelines dependent columns
+    res.data.timeline_depends_on = [
+      res.data.ship_date_column,
+      res.data.vendor2_column,
+    ]
+
+    // convert numeric values
+    res.data.vendor1_days = Number(res.data.vendor1_days)
+    res.data.vendor2_days = Number(res.data.vendor2_days)
+    res.data.extra_days = Number(res.data.extra_days)
+
+    this.setState({
+      settings: res.data,
+    });
+  }
+
+  handleContext(res) {
+    this.log("Context updated", res.data);
+
+    this.setState({
+      context: res.data,
+    });
+  }
+
+  handleEvent(res) {
+    this.log("Event fired", res.data);
+
+    if (this.state.settings.timeline_depends_on.includes(res.data.columnId)) {
       timelines.updateOne(this.state.context.boardId, res.data.itemIds[0], this.state.settings);
     }
   }
@@ -49,40 +85,6 @@ class App extends React.Component {
     const date = new Date().toISOString();
 
     console.log("[" + date + "] " + subject, data);
-  }
-
-  processSettings(data) {
-    // flatten settings
-    // some values match pattern [key]: { "[value]": true }
-    // [key]: { "[value]": true } -> [key]: "[value]"
-    Object.keys(data).forEach(key => {
-      let value = data[key]
-
-      if (value instanceof Object) {            // value is an Object
-        let val_keys = Object.keys(value);
-
-        if (val_keys.length === 1) {            // value has only 1 key
-          if (value[val_keys[0]] === true) {    // value's value is true (needed to single out sync_columns)
-            data[key] = val_keys[0];
-          }
-        }
-      }
-    });
-
-    // set timelines dependent columns
-    this.timeline_depends_on = [
-      data.ship_date_column,
-      data.vendor2_column,
-    ]
-
-    // convert numeric values
-    data.vendor1_days = Number(data.vendor1_days)
-    data.vendor2_days = Number(data.vendor2_days)
-    data.extra_days = Number(data.extra_days)
-
-    if (data.vendor1_days)
-
-      return data;
   }
 
   clickAll() {
@@ -113,10 +115,10 @@ class App extends React.Component {
 
   render() {
     return <div className={"App " + this.state.context.viewMode}>
-      <h1 class="split-hidden"><u>Outside Vendor Services</u></h1>
+      <h1 className="split-hidden"><u>Outside Vendor Services</u></h1>
       <button onClick={() => this.clickUpdateTimelines()}>Update Timelines</button>
       <button onClick={() => this.clickSyncVendors()}>Sync Vendors</button>
-      <button class="split-hidden" onClick={() => this.clickAll()}>Run All</button>
+      <button className="split-hidden" onClick={() => this.clickAll()}>Run All</button>
     </div>;
   }
 }
