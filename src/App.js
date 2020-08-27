@@ -1,6 +1,6 @@
 import React from "react";
 import "./App.scss";
-import timeline from "./timeline.js";
+import timelines from "./timelines.js";
 import mondaySdk from "monday-sdk-js";
 const monday = mondaySdk();
 
@@ -41,7 +41,7 @@ class App extends React.Component {
 
   handleUpdate(res) {
     if (this.timeline_depends_on.includes(res.data.columnId)) {
-      timeline.updateOne(this.state.context.boardId, res.data.itemIds[0], this.state.settings);
+      timelines.updateOne(this.state.context.boardId, res.data.itemIds[0], this.state.settings);
     }
   }
 
@@ -69,7 +69,7 @@ class App extends React.Component {
       }
     });
 
-    // set timeline dependent columns
+    // set timelines dependent columns
     this.timeline_depends_on = [
       data.ship_date_column,
       data.vendor2_column,
@@ -96,7 +96,7 @@ class App extends React.Component {
   }
 
   clickUpdateTimelines() {
-    timeline.updateAll(this.state.context.boardId, this.state.settings);
+    timelines.updateAll(this.state.context.boardId, this.state.settings);
 
     monday.execute("notice", {
       message: "Timelines updated",
