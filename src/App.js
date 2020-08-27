@@ -113,10 +113,10 @@ class App extends React.Component {
 
   render() {
     return <div className={"App " + this.state.context.viewMode}>
-      <h1><u>Outside Vendor Services</u></h1>
-      <button id="update" onClick={() => this.clickUpdateTimelines()}>Update Timelines</button>
-      <button id="sync" onClick={() => this.clickSyncVendors()}>Sync Vendors</button>
-      <button id="all" onClick={() => this.clickAll()}>Run All</button>
+      <h1 class="split-hidden"><u>Outside Vendor Services</u></h1>
+      <button onClick={() => this.clickUpdateTimelines()}>Update Timelines</button>
+      <button onClick={() => this.clickSyncVendors()}>Sync Vendors</button>
+      <button class="split-hidden" onClick={() => this.clickAll()}>Run All</button>
     </div>;
   }
 }

@@ -51,8 +51,7 @@ body {
 
 .split {
 
-  h1,
-  #all {
+  .split-hidden {
     display: none;
   }
 
@@ -60,6 +59,10 @@ body {
 }
 
 .fullScreen {
+  .fullscreen-hidden {
+    display: none;
+  }
+
   flex-direction: column;
 }
 
