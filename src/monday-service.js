@@ -1,65 +1,94 @@
 import mondaySdk from "monday-sdk-js";
 const monday = mondaySdk();
 
-class MondayService {
-  static async getColumnValue(token, itemId, columnId) {
+export default class MondayService {
+  static async getGroupItems(boardId, groupId, columns) {
     try {
-      const query = `query($itemId: [Int], $columnId: [String]) {
-        items (ids: $itemId) {
-          column_values(ids:$columnId) {
-            value
+      const query = `
+    query (
+      $boardId: Int!,
+      $groupId: String!,
+      $columns: [String!]
+    ) {
+      boards (ids: [$boardId]) {
+        name,
+        groups (ids: [$groupId]) {
+          items {
+            id,
+            column_values (ids: $columns) {
+              id,
+              value,
+              text
+            }
           }
-        }
-      }`;
-      const variables = {
-        columnId,
-        itemId
-      };
-
-      const response = await monday.api(query, {
-        variables
-      });
-      return response.data.items[0].column_values[0].value;
-    } catch (err) {
-      console.log(err);
-    }
-  }
-
-  static async getColumnText(token, itemId, columnId) {
-    try {
-      const query = `query($itemId: [Int], $columnId: [String]) {
-        items (ids: $itemId) {
-          column_values(ids:$columnId) {
-            text
-          }
-        }
-      }`;
-      const variables = {
-        columnId,
-        itemId
-      };
-
-      const response = await monday.api(query, {
-        variables
-      });
-      return response.data.items[0].column_values[0].text;
-    } catch (err) {
-      console.log(err);
-    }
-  }
-
-  static async changeColumnValue(token, boardId, itemId, columnId, value) {
-    try {
-      const mondayClient = initMondayClient({
-        token
-      });
-
-      const query = `mutation change_column_value($boardId: Int!, $itemId: Int!, $columnId: String!, $value: JSON!) {
-        change_column_value(board_id: $boardId, item_id: $itemId, column_id: $columnId, value: $value) {
-          id
         }
       }
-      `;
+    }`;
+      const variables = {
+        boardId,
+        groupId,
+        columns
+      };
+
+      const response = await monday.api(query, { variables });
+
+      return response.data.boards[0].groups[0].items;
+
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  static async getColumnValues(boardId, itemId, columns) {
+    try {
+      const query = `
+      query (
+        $boardId: Int!,
+        $itemId: Int!,
+        $columns: [String!]
+      ) {
+        boards (ids: [$boardId]) {
+          items (ids: [$itemId]) {
+            column_values (ids: $columns) {
+              id,
+              value,
+              text
+            }
+          }
+        }
+      }`;
+      const variables = {
+        boardId,
+        itemId,
+        columns
+      };
+
+      const response = await monday.api(query, { variables });
+
+      return response.data.boards[0].items[0];
+
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
+  static async changeColumnValue(boardId, itemId, columnId, value) {
+    try {
+      const query = `
+        mutation change_column_value (
+          $boardId: Int!, $itemId: Int!,
+          $columnId: String!,
+          $value: JSON!
+        ) {
+          change_column_value (
+            board_id: $boardId,
+            item_id: $itemId,
+            column_id: $columnId,
+            value: $value
+          ) {
+            id
+          }
+        }`;
       const variables = {
         boardId,
         columnId,
@@ -67,14 +96,23 @@ class MondayService {
         value
       };
 
-      const response = await mondayClient.api(query, {
+      const response = await monday.api(query, {
         variables
       });
+
       return response;
+
     } catch (err) {
-      console.log(err);
+      handleError(err);
     }
-  }
+  };
 }
 
-module.exports = MondayService;
+function handleError(error) {
+  monday.execute("notice", {
+    message: "Error executing GraphQL. Check console.",
+    type: "error",
+  });
+
+  console.log(error);
+}

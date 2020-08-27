@@ -1,5 +1,6 @@
 
 import mondaySdk from "monday-sdk-js";
+import mondayService from "./monday-service.js"
 
 var moment = require('moment');
 const monday = mondaySdk();
@@ -7,7 +8,7 @@ const monday = mondaySdk();
 const DATE_FORMAT = "YYYY-MM-DD";
 
 async function updateAll(boardId, cfg) {
-  const data = await getAll(
+  const data = await mondayService.getGroupItems(
     boardId,
     cfg.active_group,
     [
@@ -25,7 +26,7 @@ async function updateAll(boardId, cfg) {
 };
 
 async function updateOne(boardId, itemId, cfg) {
-  const data = await getOne(
+  const data = await mondayService.getColumnValues(
     boardId,
     itemId,
     [
@@ -54,7 +55,12 @@ function updateItem(boardId, itemId, data, cfg) {
   );
 
   if (new_timeline !== JSON.parse(vals[cfg.timeline_column].value)) {
-    changeColumnValue(boardId, itemId, cfg.timeline_column, new_timeline);
+    mondayService.changeColumnValue(
+      boardId,
+      itemId,
+      cfg.timeline_column,
+      new_timeline
+    );
   }
 };
 
@@ -76,118 +82,6 @@ function calculateTimeline(ship_date, vendor2, vendor1_days, vendor2_days, extra
     "from": start,
     "to": end
   });
-}
-
-async function getAll(boardId, group, columns) {
-  try {
-    const query = `
-    query (
-      $boardId: Int!,
-      $group: String!,
-      $columns: [String!]
-    ) {
-      boards (ids: [$boardId]) {
-        name,
-        groups (ids: [$group]) {
-          items {
-            id,
-            column_values (ids: $columns) {
-              id,
-              value,
-              text
-            }
-          }
-        }
-      }
-    }`;
-    const variables = {
-      boardId,
-      group,
-      columns
-    };
-
-    const response = await monday.api(query, { variables });
-
-    return response.data.boards[0].groups[0].items;
-
-  } catch (err) {
-    monday.execute("notice", {
-      message: "Error executing GraphQL. Check console.",
-      type: "error",
-      timeout: 10000,
-    });
-
-    console.log(err);
-  }
-}
-
-async function getOne(boardId, itemId, columns) {
-  try {
-    const query = `
-    query (
-      $boardId: Int!,
-      $itemId: Int!,
-      $columns: [String!]
-    ) {
-      boards (ids: [$boardId]) {
-        items (ids: [$itemId]) {
-          column_values (ids: $columns) {
-            id,
-            value,
-            text
-          }
-        }
-      }
-    }`;
-    const variables = {
-      boardId,
-      itemId,
-      columns
-    };
-
-    const response = await monday.api(query, { variables });
-
-    return response.data.boards[0].items[0];
-
-  } catch (err) {
-    monday.execute("notice", {
-      message: "Error executing GraphQL. Check console.",
-      type: "error",
-      timeout: 10000,
-    });
-
-    console.log(err);
-  }
-}
-
-async function changeColumnValue(boardId, itemId, columnId, value) {
-  try {
-    const query = `
-      mutation change_column_value($boardId: Int!, $itemId: Int!, $columnId: String!, $value: JSON!) {
-        change_column_value(board_id: $boardId, item_id: $itemId, column_id: $columnId, value: $value) {
-          id
-        }
-      }`;
-    const variables = {
-      boardId,
-      columnId,
-      itemId,
-      value
-    };
-
-    const response = await monday.api(query, {
-      variables
-    });
-    return response;
-  } catch (err) {
-    monday.execute("notice", {
-      message: "Error executing GraphQL. Check console.",
-      type: "error",
-      timeout: 10000,
-    });
-
-    console.log(err);
-  }
 }
 
 export default {
