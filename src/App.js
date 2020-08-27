@@ -13,8 +13,6 @@ class App extends React.Component {
       settings: {},
       context: {},
     };
-
-    this.timeline_depends_on = [];
   }
 
   componentDidMount() {
