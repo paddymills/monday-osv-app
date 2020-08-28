@@ -25,6 +25,8 @@ class App extends React.Component {
     monday.listen("events", res => {
       this.handleEvent(res);
     });
+
+    this.updateTimelines();
   }
 
   handleSettings(res) {
@@ -86,8 +88,8 @@ class App extends React.Component {
   }
 
   clickAll() {
-    this.clickUpdateTimelines();
-    this.clickSyncVendors();
+    this.updateTimelines();
+    this.syncVendors();
 
     monday.execute("notice", {
       message: "Timelines updated & Vendor boards synced",
@@ -95,7 +97,7 @@ class App extends React.Component {
     });
   }
 
-  clickUpdateTimelines() {
+  updateTimelines() {
     timelines.updateAll(this.state.context.boardId, this.state.settings);
 
     monday.execute("notice", {
@@ -104,7 +106,7 @@ class App extends React.Component {
     });
   }
 
-  clickSyncVendors() {
+  syncVendors() {
     monday.execute("notice", {
       message: "Vendor boards synced",
       type: "success",
@@ -114,8 +116,8 @@ class App extends React.Component {
   render() {
     return <div className={"App " + this.state.context.viewMode}>
       <h1 className="split-hidden"><u>Outside Vendor Services</u></h1>
-      <button onClick={() => this.clickUpdateTimelines()}>Update Timelines</button>
-      <button onClick={() => this.clickSyncVendors()}>Sync Vendors</button>
+      <button onClick={() => this.updateTimelines()}>Update Timelines</button>
+      <button onClick={() => this.syncVendors()}>Sync Vendors</button>
       <button className="split-hidden" onClick={() => this.clickAll()}>Run All</button>
     </div>;
   }
