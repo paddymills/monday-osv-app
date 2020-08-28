@@ -9,11 +9,7 @@ async function updateAll(boardId, cfg) {
   const data = await mondayService.getGroupItems(
     boardId,
     cfg.active_group,
-    [
-      cfg.ship_date_column,
-      cfg.vendor2_column,
-      cfg.timeline_column
-    ]
+    getColumns(cfg)
   );
 
   data.forEach(element => {
@@ -27,11 +23,7 @@ async function updateOne(boardId, itemId, cfg) {
   const data = await mondayService.getColumnValues(
     boardId,
     itemId,
-    [
-      cfg.ship_date_column,
-      cfg.vendor2_column,
-      cfg.timeline_column
-    ]
+    getColumns(cfg)
   );
 
   updateItem(boardId, itemId, data, cfg);
@@ -61,6 +53,10 @@ function updateItem(boardId, itemId, data, cfg) {
     );
   }
 };
+
+function getColumns(cfg) {
+  return [cfg.ship_date_column, cfg.vendor2_column, cfg.timeline_column];
+}
 
 function calculateTimeline(ship_date, vendor2, vendor1_days, vendor2_days, extra_days) {
   let date = moment(ship_date);

@@ -74,6 +74,8 @@ class App extends React.Component {
   handleEvent(res) {
     if (this.state.settings.timeline_depends_on.includes(res.data.columnId)) {
       timelines.updateOne(this.state.context.boardId, res.data.itemIds[0], this.state.settings);
+    } else if (Object.keys(this.state.settings.sync_columns).includes(res.data.columnId)) {
+      console.log(res.data);
     } else {
       return // do not log
     }
