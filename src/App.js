@@ -25,8 +25,6 @@ class App extends React.Component {
     monday.listen("events", res => {
       this.handleEvent(res);
     });
-
-    this.updateTimelines();
   }
 
   handleSettings(res) {
@@ -74,11 +72,13 @@ class App extends React.Component {
   }
 
   handleEvent(res) {
-    this.log("Event fired", res.data);
-
     if (this.state.settings.timeline_depends_on.includes(res.data.columnId)) {
       timelines.updateOne(this.state.context.boardId, res.data.itemIds[0], this.state.settings);
+    } else {
+      return // do not log
     }
+
+    this.log("Event fired", res.data);
   }
 
   log(subject, data) {
