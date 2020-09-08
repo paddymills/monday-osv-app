@@ -1,6 +1,7 @@
 import React from "react";
 import "./App.scss";
 import timelines from "./timelines.js";
+import vendors from "./vendors.js";
 import mondaySdk from "monday-sdk-js";
 const monday = mondaySdk();
 
@@ -12,6 +13,7 @@ class App extends React.Component {
     this.state = {
       settings: {},
       context: {},
+      sync: {},
     };
   }
 
@@ -21,6 +23,9 @@ class App extends React.Component {
     });
     monday.listen("context", res => {
       this.handleContext(res);
+
+      const sync_cfg = await vendors.initVendors(this.state.context.boardId);
+      this.setState({ sync: sync_cfg });
     });
     monday.listen("events", res => {
       this.handleEvent(res);

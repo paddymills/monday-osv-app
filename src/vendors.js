@@ -1,5 +1,6 @@
 
 import mondayService from "./monday-service.js"
+import mondaySdk from "monday-sdk-js"
 
 async function syncAll(boardId, cfg) {
   const data = await mondayService.getGroupItems(
@@ -78,7 +79,43 @@ function getColumns(cfg) {
   return cols;
 }
 
+async function initVendors(boardId) {
+  const monday = mondaySdk()
+
+  // get board workspace
+  const query = `query (
+      $boardId: Int!
+    ) {
+    boards (ids: [$boardId]) {
+      workspace_id
+    }
+  }`;
+  const variables = { boardId };
+  const response = await monday.api(query, { variables });
+  let cfg = { workspaceId: response.data.boards[0].workspace_id, vendorBoardIds: [] }
+
+  // get workspace boards
+  const query = `query {
+    boards {
+      id,
+      name,
+      workspace_id
+    }
+  }`;
+  const response = await monday.api(query);
+  response.forEach(board => {
+    const id = Number(board.id);
+
+    if (board.workspace_id === cfg.workspaceId && id !== boardId) {
+      cfg.vendorBoardIds.push({ id: board.id, name: board.name });
+    }
+  });
+
+  return cfg;
+}
+
 export default {
+  initVendors,
   updateOne,
   updateAll
 }
