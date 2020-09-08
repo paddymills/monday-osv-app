@@ -83,23 +83,33 @@ async function initVendors(boardId) {
   const monday = mondaySdk()
 
   // get board workspace
-  const query = `query (
+  let query = `query (
       $boardId: Int!
     ) {
     boards (ids: [$boardId]) {
-      workspace_id
+      workspace_id,
+      columns {
+        id
+      }
     }
   }`;
   const variables = { boardId };
   const response = await monday.api(query, { variables });
-  let cfg = { workspaceId: response.data.boards[0].workspace_id, vendorBoardIds: [] }
+  let cfg = {
+    workspaceId: response.data.boards[0].workspace_id,
+    vendorBoards: {},
+    mainColumns: response.data.boards[0].columns.map(col => col.id).filter(id => id !== "status"),
+  };
 
   // get workspace boards
-  const query = `query {
+  query = `query {
     boards {
       id,
       name,
-      workspace_id
+      workspace_id,
+      columns {
+        id
+      }
     }
   }`;
   const response = await monday.api(query);
@@ -107,7 +117,10 @@ async function initVendors(boardId) {
     const id = Number(board.id);
 
     if (board.workspace_id === cfg.workspaceId && id !== boardId) {
-      cfg.vendorBoardIds.push({ id: board.id, name: board.name });
+      cfg.vendorBoards[board.id] = {
+        name: board.name,
+        columns: board.columns.map(col => col.id),
+      };
     }
   });
 
