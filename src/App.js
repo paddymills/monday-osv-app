@@ -77,15 +77,27 @@ class App extends React.Component {
   }
 
   handleEvent(res) {
-    if (this.state.settings.timeline_depends_on.includes(res.data.columnId)) {
-      timelines.updateOne(this.state.context.boardId, res.data.itemIds[0], this.state.settings);
-    } else if (Object.keys(this.state.settings.sync_columns).includes(res.data.columnId)) {
-      console.log(res.data);
-    } else {
-      return // do not log
-    }
+    let logEvent = false;
 
-    this.log("Event fired", res.data);
+    res.data.itemIds.forEach(itemId => {
+
+      if (this.state.settings.timeline_depends_on.includes(res.data.columnId)) {
+        timelines.updateOne(res.data.boardId, itemId, this.state.settings);
+
+        logEvent = true;
+      }
+
+      if (vendors.requiresUpdate(res.data.boardId, res.data.columnId, this.state.settings)) {
+        console.log(res.data);
+
+        logEvent = true;
+      }
+
+    });
+
+    if (logEvent) {
+      this.log("Event fired", res.data);
+    }
   }
 
   log(subject, data) {

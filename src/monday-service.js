@@ -75,7 +75,7 @@ export default class MondayService {
   static async changeColumnValue(boardId, itemId, columnId, value) {
     try {
       const query = `
-        mutation change_column_value (
+        mutation (
           $boardId: Int!, $itemId: Int!,
           $columnId: String!,
           $value: JSON!
