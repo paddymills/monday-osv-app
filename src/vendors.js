@@ -3,6 +3,11 @@ import mondayService from "./monday-service.js";
 import mondaySdk from "monday-sdk-js";
 const monday = mondaySdk();
 
+/*
+  TODO: move all this to a service(class)
+  so that cfg does not have to be pushed around
+*/
+
 async function initVendors(boardId) {
   /*
     This initializes the configuration of all the
@@ -96,8 +101,31 @@ async function handleVendorChange() {
   // determine if job needs added or removed from vendor boards
 }
 
-async function addToVendor() {
+async function addToVendor(itemName, vendorName) {
+  /*
+    TODO: change function to accept itemId (from main board)
+    and have it find the vendor board ID and values to move
+  */
+
+  const boardId = 0;
+  const values = JSON.stringify({});
+
   // add item to vendor when vendor1 or vendor2 assigned
+  const query = `mutation (
+    $boardId: Int,
+    $itemName: String,
+    $values: JSON
+  ) {
+    create_item (
+      board_id: $boardId,
+      item_name: $itemName,
+      column_values: $values
+    ) {
+      id
+    }
+  }`;
+  const variables = { boardId, itemName, values };
+  const res = await monday.api(query, { variables });
 }
 
 async function deleteFromVendor(itemId) {
@@ -109,8 +137,6 @@ async function deleteFromVendor(itemId) {
   }`;
   const variables = { itemId };
   monday.api(query, { variables });
-
-  monday.storage.instance.deleteItem(itemId);
 }
 
 async function syncColumn(fromBoardId, fromItemId, toBoardId, toItemId, columnId) {
