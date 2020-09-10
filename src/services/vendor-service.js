@@ -10,11 +10,39 @@ const monday = mondaySdk();
 
 export default class VendorSyncService {
   constructor() {
-    this.boardId = 0;
+    this.initStatus = {
+      settings: false,
+      context: false,
+    };
   }
 
-  async init(boardId) {
-    this.boardId = boardId;
+  updateSettings(settings) {
+    this.activeGroup = settings.activeGroup;
+    this.vendor1Column = getKey(settings.vendor1Column);
+    this.vendor2Column = getKey(settings.vendor2Column);
+
+    this.vendorColumns = [this.vendor1Column, this.vendor2Column];
+
+    this.initStatus.settings = true;
+
+    // run init() if everything is initialized
+    if (this.initStatus.settings && this.initStatus.context) {
+      this.init();
+    }
+  }
+
+  updateContext(context) {
+    this.boardId = context.boardId;
+
+    this.initStatus.context = true;
+
+    // run init() if everything is initialized
+    if (this.initStatus.settings && this.initStatus.context) {
+      this.init();
+    }
+  }
+
+  async init() {
 
     /*
       This initializes the configuration of all the
@@ -46,16 +74,16 @@ export default class VendorSyncService {
           }
         }
       }`;
-    const variables = { boardId };
-    const response = await monday.api(query, { variables });
+    const variables = { boardId: this.boardId };
+    let response = await monday.api(query, { variables });
     const board = response.data.boards[0];
-    let cfg = {
-      workspaceId: board.workspace_id,
-      mainColumns: board.columns.map(col => col.id).filter(id => id !== "status"),
-      vendors: {},
-      vendorBoards: {},
-      syncColumns: []
-    };
+
+    this.workspaceId = board.workspace_id;
+    this.mainColumns = board.columns
+      .map(col => col.id)
+      .filter(id => id !== "status");
+
+    this.vendorBoards = {};
 
     // get workspace boards
     query = `query {
@@ -68,39 +96,69 @@ export default class VendorSyncService {
           }
         }
       }`;
-    const response = await monday.api(query);
-    response.filter(board => board.workspace_id === cfg.workspaceId).forEach(board => {
-      const id = Number(board.id);
+    response = await monday.api(query);
+    response.data.boards
+      .filter(board => board.workspace_id === this.workspaceId)
+      .forEach(board => {
+        const id = Number(board.id);
 
-      if (id !== boardId) {
-        cfg.vendorBoards[board.id] = {
-          name: board.name,
-          columns: board.columns.map(col => col.id),
-        };
+        if (id !== this.boardId) {
+          this.vendorBoards[id] = {
+            name: board.name,
+            columns: board.columns.map(col => col.id),
+          };
+        }
+      }
+      );
+
+    console.log("vendors:", this.vendors);
+  }
+
+  get vendors() {
+    // data: {} -> { 0: 0.name, 1: 1.name, ... }
+    return Object.keys(this.vendorBoards).reduce((acc, x) => ({ ...acc, [x]: this.vendorBoards[x].name }), {});
+  }
+
+  getVendorIdByName(vendor) {
+    Object.keys(this.vendorBoards).forEach(id => {
+      if (this.vendorBoards[id].name === vendor) {
+        return id;
       }
     });
 
-    return cfg;
+    return;
   }
 
-  async syncAll(boardId, cfg) {
+  syncColumns(vendor) {
+    if (typeof vendor === "string") {
+      vendor = this.getVendorIdByName(vendor);
+    }
+
+    if (!vendor) {
+      return;
+    }
+
+    return this.vendorBoards[vendor].columns.filter(col => this.mainColumns.includes(col));
+  }
+
+  async syncAll() {
     const data = await mondayService.getGroupItems(
-      boardId,
-      cfg.active_group,
-      getColumns(cfg)
+      this.boardId,
+      this.activeGroup,
+      this.vendorColumns
     );
 
     data.forEach(element => {
       const id = Number(element.id);
 
-      updateItem(boardId, id, element, cfg);
+      this.updateItem(id, element);
     });
   };
 
-  async syncOne(boardId, itemId, itemVal, cfg) {
-    const vendors = await getVendors(boardId, itemId, cfg);
+  async syncOne(itemId, itemVal) {
+    const vendors = await this.getVendors(itemId);
 
-    updateItem(boardId, itemId, data, cfg);
+    this.updateItem(itemId, vendors);
   }
 
   async handleVendorChange() {
@@ -114,7 +172,7 @@ export default class VendorSyncService {
       and have it find the vendor board ID and values to move
     */
 
-    const boardId = 0;
+    const boardId = this.boardId
     const values = JSON.stringify({});
 
     // add item to vendor when vendor1 or vendor2 assigned
@@ -133,6 +191,7 @@ export default class VendorSyncService {
       }`;
     const variables = { boardId, itemName, values };
     const res = await monday.api(query, { variables });
+    console.log(res);
   }
 
   async deleteFromVendor(itemId) {
@@ -159,8 +218,8 @@ export default class VendorSyncService {
 
   };
 
-  async requiresUpdate(boardId, itemId, cfg) {
-    const vendors = await getVendors(boardId, itemId, cfg);
+  async requiresUpdate(itemId) {
+    const vendors = await this.getVendors(itemId);
     if (!vendors.some(item => item.text)) {  // all vendors null
       return false;
     }
@@ -170,14 +229,18 @@ export default class VendorSyncService {
     });
   }
 
-  async getVendors(boardId, itemId, cfg) {
+  async getVendors(itemId) {
     const data = await mondayService.getColumnValues(
-      boardId,
+      this.boardId,
       itemId,
-      [cfg.vendor1_column, cfg.vendor2_column]
+      this.vendorColumns
     );
 
     // data: x[] -> { 0.id: {0}, 1.id: {1}, ... }
     return data.column_values.reduce((acc, x) => ({ ...acc, [x.id]: x }), {});
   }
+}
+
+function getKey(obj) {
+  return Object.keys(obj)[0];
 }

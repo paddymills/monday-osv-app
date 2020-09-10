@@ -103,6 +103,27 @@ export default class MondayService {
       handleError(err);
     }
   };
+
+  static success(msg) {
+    monday.execute("notice", {
+      message: msg,
+      type: "success",
+    });
+  }
+
+  static info(msg) {
+    monday.execute("notice", {
+      message: msg,
+      type: "info",
+    });
+  }
+
+  static error(msg) {
+    monday.execute("notice", {
+      message: msg,
+      type: "error",
+    });
+  }
 }
 
 function handleError(error) {

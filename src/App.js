@@ -1,7 +1,7 @@
 import React from "react";
 import "./App.scss";
-import timelines from "./timelines.js";
-import vendors from "./vendors.js";
+import timelineService from "./services/timeline-service.js";
+import vendorService from "./services/vendor-service.js";
 import mondaySdk from "monday-sdk-js";
 const monday = mondaySdk();
 
@@ -13,86 +13,69 @@ class App extends React.Component {
     this.state = {
       settings: {},
       context: {},
-      sync: {},
     };
 
     // services
-    this.vendors = vendors();
-    this.timelines = timelines();
+    this.services = {
+      vendors: new vendorService(),
+      timelines: new timelineService(),
+    };
   }
 
   componentDidMount() {
-    monday.listen("settings", res => {
-      this.handleSettings(res);
-    });
-    monday.listen("context", res => {
-      this.handleContext(res);
+    monday.listen(["settings", "context", "events"], res => {
+      const { type, data } = res;
 
-      const sync_cfg = await vendors.initVendors(this.state.context.boardId);
-      this.setState({ sync: sync_cfg });
-    });
-    monday.listen("events", res => {
-      this.handleEvent(res);
-    });
-  }
+      switch (type) {
+        case "settings":
+          this.log("Settings update:", data);
 
-  handleSettings(res) {
-    this.log("Settings updated", res.data);
+          // update services
+          Object.values(this.services).forEach(
+            service => service.updateSettings(data)
+          );
 
-    // flatten settings
-    // some values match pattern [key]: { "[value]": true }
-    // [key]: { "[value]": true } -> [key]: "[value]"
-    Object.keys(res.data).forEach(key => {
-      let value = res.data[key]
+          // store in state
+          this.setState({ settings: data });
 
-      if (value instanceof Object) {            // value is an Object
-        let val_keys = Object.keys(value);
+          break;
+        case "context":
+          this.log("Context update:", data);
 
-        if (val_keys.length === 1) {            // value has only 1 key
-          if (value[val_keys[0]] === true) {    // value's value is true (needed to single out sync_columns)
-            res.data[key] = val_keys[0];
-          }
-        }
+          // update services
+          Object.values(this.services).forEach(
+            service => service.updateContext(data)
+          );
+
+          // store in state
+          this.setState({ context: data });
+
+          break;
+        case "events":
+          this.log("Event:", data);
+          this.handleEvent(res);
+          break;
+        default:
+          this.log("Unhandled event received", res)
+          break;
       }
-    });
-
-    // set timelines dependent columns
-    res.data.timeline_depends_on = [
-      res.data.ship_date_column,
-      res.data.vendor2_column,
-    ]
-
-    // convert numeric values
-    res.data.vendor1_days = Number(res.data.vendor1_days)
-    res.data.vendor2_days = Number(res.data.vendor2_days)
-    res.data.extra_days = Number(res.data.extra_days)
-
-    this.setState({
-      settings: res.data,
-    });
-  }
-
-  handleContext(res) {
-    this.log("Context updated", res.data);
-
-    this.setState({
-      context: res.data,
     });
   }
 
   handleEvent(res) {
+    const { data } = res;
     let logEvent = false;
 
-    res.data.itemIds.forEach(itemId => {
+    data.itemIds.forEach(itemId => {
 
-      if (this.state.settings.timeline_depends_on.includes(res.data.columnId)) {
-        this.timelines.updateOne(res.data.boardId, itemId, this.state.settings);
+      if (this.state.settings.timelineDependsOn.includes(data.columnId)) {
+        this.services.timelines.updateOne(itemId);
 
         logEvent = true;
       }
 
-      if (vendors.requiresUpdate(res.data.boardId, res.data.columnId, this.state.settings)) {
-        console.log(res.data);
+      if (this.services.vendors.requiresUpdate(data.columnId)) {
+        // console.log(data);
 
         logEvent = true;
       }
@@ -100,14 +83,14 @@ class App extends React.Component {
     });
 
     if (logEvent) {
-      this.log("Event fired", res.data);
+      this.log("Event fired", res);
     }
   }
 
   log(subject, data) {
     const date = new Date().toISOString();
 
-    console.log("[" + date + "] " + subject, data);
+    console.log("[" + date + "] " + subject + "\n", data);
   }
 
   clickAll() {
@@ -121,12 +104,7 @@ class App extends React.Component {
   }
 
   updateTimelines() {
-    timelines.updateAll(this.state.context.boardId, this.state.settings);
-
-    monday.execute("notice", {
-      message: "Timelines updated",
-      type: "success",
-    });
+    this.services.timelines.updateAll(this.state.context.boardId, this.state.settings);
   }
 
   syncVendors() {
