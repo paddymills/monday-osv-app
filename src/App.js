@@ -15,6 +15,10 @@ class App extends React.Component {
       context: {},
       sync: {},
     };
+
+    // services
+    this.vendors = vendors();
+    this.timelines = timelines();
   }
 
   componentDidMount() {
@@ -82,7 +86,7 @@ class App extends React.Component {
     res.data.itemIds.forEach(itemId => {
 
       if (this.state.settings.timeline_depends_on.includes(res.data.columnId)) {
-        timelines.updateOne(res.data.boardId, itemId, this.state.settings);
+        this.timelines.updateOne(res.data.boardId, itemId, this.state.settings);
 
         logEvent = true;
       }

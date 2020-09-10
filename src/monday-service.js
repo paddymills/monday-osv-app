@@ -4,26 +4,25 @@ const monday = mondaySdk();
 export default class MondayService {
   static async getGroupItems(boardId, groupId, columns) {
     try {
-      const query = `
-    query (
-      $boardId: Int!,
-      $groupId: String!,
-      $columns: [String!]
-    ) {
-      boards (ids: [$boardId]) {
-        name,
-        groups (ids: [$groupId]) {
-          items {
-            id,
-            column_values (ids: $columns) {
+      const query = `query (
+        $boardId: Int!,
+        $groupId: String!,
+        $columns: [String!]
+      ) {
+        boards (ids: [$boardId]) {
+          name,
+          groups (ids: [$groupId]) {
+            items {
               id,
-              value,
-              text
+              column_values (ids: $columns) {
+                id,
+                value,
+                text
+              }
             }
           }
         }
-      }
-    }`;
+      }`;
       const variables = {
         boardId,
         groupId,
@@ -41,8 +40,7 @@ export default class MondayService {
 
   static async getColumnValues(boardId, itemId, columns) {
     try {
-      const query = `
-      query (
+      const query = `query (
         $boardId: Int!,
         $itemId: Int!,
         $columns: [String!]
@@ -74,21 +72,20 @@ export default class MondayService {
 
   static async changeColumnValue(boardId, itemId, columnId, value) {
     try {
-      const query = `
-        mutation (
-          $boardId: Int!, $itemId: Int!,
-          $columnId: String!,
-          $value: JSON!
+      const query = `mutation (
+        $boardId: Int!, $itemId: Int!,
+        $columnId: String!,
+        $value: JSON!
+      ) {
+        change_column_value (
+          board_id: $boardId,
+          item_id: $itemId,
+          column_id: $columnId,
+          value: $value
         ) {
-          change_column_value (
-            board_id: $boardId,
-            item_id: $itemId,
-            column_id: $columnId,
-            value: $value
-          ) {
-            id
-          }
-        }`;
+          id
+        }
+      }`;
       const variables = {
         boardId,
         columnId,
