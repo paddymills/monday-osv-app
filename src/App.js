@@ -74,7 +74,7 @@ class App extends React.Component {
         logEvent = true;
       }
 
-      if (this.services.vendors.requiresUpdate(data.columnId)) {
+      if (this.services.vendors.requiresUpdate(itemId, data.columnId)) {
         // console.log(data);
 
         logEvent = true;

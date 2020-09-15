@@ -110,7 +110,7 @@ export default class VendorSyncService {
       }
       );
 
-    console.log("vendors:", this.vendors);
+    // console.log("vendors:", this.vendors);
   }
 
   get vendors() {
@@ -141,17 +141,17 @@ export default class VendorSyncService {
   }
 
   async syncAll() {
-    // const data = await mondayService.getGroupItems(
-    //   this.boardId,
-    //   this.activeGroup,
-    //   this.vendorColumns
-    // );
+    const data = await mondayService.getGroupItems(
+      this.boardId,
+      this.activeGroup,
+      this.vendorColumns
+    );
 
-    // data.forEach(element => {
-    //   const id = Number(element.id);
+    data.forEach(element => {
+      const id = Number(element.id);
 
-    //   this.updateItem(id, element);
-    // });
+      // this.updateItem(id, element);
+    });
 
     mondayService.success("Vendor boards synced");
   };
@@ -219,18 +219,30 @@ export default class VendorSyncService {
 
   };
 
-  async requiresUpdate(itemId) {
-    const vendors = await this.getVendors(itemId);
-    if (!vendors.some(item => item.text)) {  // all vendors null
-      return false;
+  async requiresUpdate(itemId, columnId) {
+
+    // get current vendor values
+    const currentVendorsValues = this.getItemVendors(itemId).then(res => {
+      return Object.values(res).map(item => item.text);
+    });
+
+    // get vendor values from storage
+    const vendorsFromStorage = monday.storage.instance
+      .getItem(itemId)
+      .then(res => {
+        return res.data.value;
+      });
+
+    if (vendorsFromStorage && vendorsFromStorage.some(x => x)) {
+      if (vendorsFromStorage !== currentVendorsValues) {
+        return true;
+      }
     }
 
-    monday.storage.instance.getItem(itemId).then(res => {
-      console.log(res);
-    });
+    return false;
   }
 
-  async getVendors(itemId) {
+  async getItemVendors(itemId) {
     const data = await mondayService.getColumnValues(
       this.boardId,
       itemId,
