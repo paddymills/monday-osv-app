@@ -23,7 +23,7 @@ export default class TimelineService {
     this.vendor2Days = Number(settings.vendor2Days);
     this.extraDays = Number(settings.extraDays);
 
-    this.timelineDepends = [this.shipDateColumn, this.vendor2Column];
+    this.timelineDependsOn = [this.shipDateColumn, this.vendor2Column];
     this.timelineCalcColumns = [this.shipDateColumn, this.vendor2Column, this.timelineColumn];
   }
 

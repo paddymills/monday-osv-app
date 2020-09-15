@@ -69,7 +69,7 @@ class App extends React.Component {
 
     data.itemIds.forEach(itemId => {
 
-      if (this.state.settings.timelineDependsOn.includes(data.columnId)) {
+      if (this.services.timelines.timelineDependsOn.includes(data.columnId)) {
         this.services.timelines.updateOne(itemId);
 
         logEvent = true;
