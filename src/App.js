@@ -15,7 +15,7 @@ class App extends React.Component {
       context: {},
     };
 
-    // services
+    // init services
     this.services = {
       vendors: new vendorService(),
       timelines: new timelineService(),
@@ -103,10 +103,6 @@ class App extends React.Component {
     });
   }
 
-  updateTimelines() {
-    this.services.timelines.updateAll(this.state.context.boardId, this.state.settings);
-  }
-
   syncVendors() {
     monday.execute("notice", {
       message: "Vendor boards synced",
@@ -117,7 +113,7 @@ class App extends React.Component {
   render() {
     return <div className={"App " + this.state.context.viewMode}>
       <h1 className="split-hidden"><u>Outside Vendor Services</u></h1>
-      <button onClick={() => this.updateTimelines()}>Update Timelines</button>
+      <button onClick={() => this.services.timelines.updateAll()}>Update Timelines</button>
       <button onClick={() => this.syncVendors()}>Sync Vendors</button>
       <button className="split-hidden" onClick={() => this.clickAll()}>Run All</button>
     </div>;

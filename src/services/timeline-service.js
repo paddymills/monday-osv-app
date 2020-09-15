@@ -5,6 +5,10 @@ var moment = require('moment');
 
 const DATE_FORMAT = "YYYY-MM-DD";
 
+function getKey(obj) {
+  return Object.keys(obj)[0];
+}
+
 export default class TimelineService {
   updateSettings(settings) {
     this.activeGroup = settings.activeGroup;
@@ -97,8 +101,4 @@ export default class TimelineService {
       "to": end
     });
   }
-}
-
-function getKey(obj) {
-  return Object.keys(obj)[0];
 }

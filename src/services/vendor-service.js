@@ -3,10 +3,9 @@ import mondayService from "./monday-service.js";
 import mondaySdk from "monday-sdk-js";
 const monday = mondaySdk();
 
-/*
-  TODO: move all this to a service(class)
-  so that cfg does not have to be pushed around
-*/
+function getKey(obj) {
+  return Object.keys(obj)[0];
+}
 
 export default class VendorSyncService {
   constructor() {
@@ -239,8 +238,4 @@ export default class VendorSyncService {
     // data: x[] -> { 0.id: {0}, 1.id: {1}, ... }
     return data.column_values.reduce((acc, x) => ({ ...acc, [x.id]: x }), {});
   }
-}
-
-function getKey(obj) {
-  return Object.keys(obj)[0];
 }
