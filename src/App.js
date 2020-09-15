@@ -53,7 +53,6 @@ class App extends React.Component {
           break;
         case "new_items":
         case "change_column_values":
-          this.log("Event:", data);
           this.handleEvent(res);
           break;
         default:
