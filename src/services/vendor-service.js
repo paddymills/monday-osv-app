@@ -141,17 +141,19 @@ export default class VendorSyncService {
   }
 
   async syncAll() {
-    const data = await mondayService.getGroupItems(
-      this.boardId,
-      this.activeGroup,
-      this.vendorColumns
-    );
+    // const data = await mondayService.getGroupItems(
+    //   this.boardId,
+    //   this.activeGroup,
+    //   this.vendorColumns
+    // );
 
-    data.forEach(element => {
-      const id = Number(element.id);
+    // data.forEach(element => {
+    //   const id = Number(element.id);
 
-      this.updateItem(id, element);
-    });
+    //   this.updateItem(id, element);
+    // });
+
+    mondayService.success("Vendor boards synced");
   };
 
   async syncOne(itemId, itemVal) {

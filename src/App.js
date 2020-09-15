@@ -94,18 +94,12 @@ class App extends React.Component {
   }
 
   clickAll() {
-    this.updateTimelines();
-    this.syncVendors();
+    Object.values(this.services).forEach(
+      service => service.updateAll()
+    );
 
     monday.execute("notice", {
       message: "Timelines updated & Vendor boards synced",
-      type: "success",
-    });
-  }
-
-  syncVendors() {
-    monday.execute("notice", {
-      message: "Vendor boards synced",
       type: "success",
     });
   }
@@ -114,7 +108,7 @@ class App extends React.Component {
     return <div className={"App " + this.state.context.viewMode}>
       <h1 className="split-hidden"><u>Outside Vendor Services</u></h1>
       <button onClick={() => this.services.timelines.updateAll()}>Update Timelines</button>
-      <button onClick={() => this.syncVendors()}>Sync Vendors</button>
+      <button onClick={() => this.services.vendors.updateAll()}>Sync Vendors</button>
       <button className="split-hidden" onClick={() => this.clickAll()}>Run All</button>
     </div>;
   }
