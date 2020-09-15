@@ -51,7 +51,8 @@ class App extends React.Component {
           this.setState({ context: data });
 
           break;
-        case "events":
+        case "new_items":
+        case "change_column_values":
           this.log("Event:", data);
           this.handleEvent(res);
           break;
