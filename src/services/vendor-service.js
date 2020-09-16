@@ -103,14 +103,15 @@ export default class VendorSyncService {
 
         if (id !== this.boardId) {
           this.vendorBoards[id] = {
-            name: board.name,
+            // TODO: remove name.replace when go-live
+            name: board.name.replace("dev :: ", ""),
             columns: board.columns.map(col => col.id),
           };
         }
       }
       );
 
-    // console.log("vendors:", this.vendors);
+    console.log("vendors:", this.vendorBoards);
   }
 
   get vendors() {
@@ -128,18 +129,6 @@ export default class VendorSyncService {
     return;
   }
 
-  syncColumns(vendor) {
-    if (typeof vendor === "string") {
-      vendor = this.getVendorIdByName(vendor);
-    }
-
-    if (!vendor) {
-      return;
-    }
-
-    return this.vendorBoards[vendor].columns.filter(col => this.mainColumns.includes(col));
-  }
-
   async syncAll() {
     const data = await mondayService.getGroupItems(
       this.boardId,
@@ -150,49 +139,176 @@ export default class VendorSyncService {
     data.forEach(element => {
       const id = Number(element.id);
 
-      // this.updateItem(id, element);
+      this.mainColumns.forEach(col => {
+        this.updateItem(id, col);
+      });
     });
 
+    // TODO: sync vendor statuses back to main board
+
     mondayService.success("Vendor boards synced");
-  };
-
-  async syncOne(itemId, itemVal) {
-    const vendors = await this.getVendors(itemId);
-
-    this.updateItem(itemId, vendors);
   }
 
-  async handleVendorChange() {
+  async syncOne(itemId, columnId) {
+    if (this.vendorColumns.includes(columnId)) {
+      this.handleVendorChange(itemId);
+    } else {
+      this.updateItem(itemId, columnId);
+    }
+  }
+
+  async updateItem(itemId, columnId) {
+    // get vendors from storage
+    const vendorsFromStorage = await this.getVendorsFromStorage(itemId);
+
+    if (vendorsFromStorage === null) {
+      this.handleVendorChange(itemId);
+      return; // handleVendorChange will sync boards
+    }
+
+    // Get vendor column values
+    const vendorColumnValues = await this.getItemVendors(itemId);
+
+    // vendor 1
+    this.syncVendor(
+      itemId,
+      columnId,
+      vendorColumnValues[this.vendor1Column],
+      vendorsFromStorage.vendor1,
+    );
+
+    // vendor 2
+    this.syncVendor(
+      itemId,
+      columnId,
+      vendorColumnValues[this.vendor2Column],
+      vendorsFromStorage.vendor2,
+    );
+  }
+
+  async syncColumn(fromBoardId, fromItemId, toBoardId, toItemId, columnId) {
+    const value = await mondayService
+      .getColumnValues(fromBoardId, fromItemId, [columnId])
+      .then(res => {
+        return res.data.boards[0].items[0].column_values[0].value
+      });
+
+    mondayService.changeColumnValue(toBoardId, toItemId, columnId, value);
+  }
+
+  async syncVendor(itemId, columnId, vendorColumn, vendorStorage) {
+    const toBoard = this.getVendorIdByName(vendorColumn.text);
+
+    if (vendorStorage.name !== vendorColumn.text) {
+      this.handleVendorChange(itemId);
+    } else if (vendorColumn) {
+      this.syncColumn(
+        this.boardId,
+        itemId,
+        toBoard,
+        vendorStorage.id,
+        columnId
+      );
+    } else if (vendorStorage.id) {
+      // remove from synced board
+      this.deleteFromVendor(vendorStorage.id);
+    }
+  }
+
+  async handleVendorChange(itemId) {
     // check vendor1 and vendor 2
     // determine if job needs added or removed from vendor boards
+
+    // get vendor values from storage (previous synced state)
+    const columns = await this.getItemVendors(itemId);
+    let storage = await this.getVendorsFromStorage(itemId)
+      .then(res => {
+        // if not in storage, init storage object
+        if (res === null) {
+          return {
+            vendor1: {
+              name: null,
+              id: null,
+            },
+            vendor2: {
+              name: null,
+              id: null,
+            }
+          }
+        }
+
+        return res;
+      });
+
+
+    const vendorPairs = [
+      [this.vendor1Column, "vendor1"],
+      [this.vendor2Column, "vendor2"],
+    ];
+
+    for (const [c, p] of vendorPairs) {
+      if (columns[c].text === null) {
+        if (storage[p].id) {
+          // remove from synced board
+          this.deleteFromVendor(storage[p].id);
+        }
+      } else if (columns[c].text !== storage[p].name) {
+        // add to vendor
+        const newItemId = await this.addToVendor(itemId, columns[c].text);
+
+        // update storage object
+        storage[p] = {
+          name: columns[c].text,
+          id: newItemId,
+        };
+      }
+    }
+
+    // write storage object back to storage
+    this.setVendorStorage(itemId, storage);
+
+    console.log("vendor change: ", storage);
   }
 
-  async addToVendor(itemName, vendorName) {
-    /*
-      TODO: change function to accept itemId (from main board)
-      and have it find the vendor board ID and values to move
-    */
+  async addToVendor(itemId, vendorName) {
+    const vendorBoardId = this.getVendorIdByName(vendorName);
+    if (!vendorBoardId) {
+      mondayService.error("Vendor \"" + vendorName + "\" does not have a board");
+      return;
+    }
 
-    const boardId = this.boardId
-    const values = JSON.stringify({});
+    const itemName = await mondayService.getItemName(itemId);
+
+    const columns = this.vendorBoards[vendorBoardId]
+      .filter(x => this.mainColumns.includes(x));
+
+    const values = await mondayService
+      .getColumnValues(this.boardId, itemId, columns)
+      .then(res => {
+        return res.reduce((acc, x) => ({ ...acc, [x.id]: x.value }), {})
+      });
+
+    console.log("AddToVendor::getColumnValues_reduce: ", values);
 
     // add item to vendor when vendor1 or vendor2 assigned
     const query = `mutation (
-        $boardId: Int,
+        $vendorBoardId: Int,
         $itemName: String,
         $values: JSON
       ) {
         create_item (
-          board_id: $boardId,
+          board_id: $vendorBoardId,
           item_name: $itemName,
           column_values: $values
         ) {
           id
         }
       }`;
-    const variables = { boardId, itemName, values };
+    const variables = { vendorBoardId, itemName, values };
     const res = await monday.api(query, { variables });
-    console.log(res);
+    console.log("AddToVendor::add item return:", res);
+
+    return res.data.id;
   }
 
   async deleteFromVendor(itemId) {
@@ -206,38 +322,49 @@ export default class VendorSyncService {
     monday.api(query, { variables });
   }
 
-  async syncColumn(fromBoardId, fromItemId, toBoardId, toItemId, columnId) {
-    const response = await mondayService.getColumnValues(fromBoardId, fromItemId, [columnId]);
-    const value = response.data.boards[0].items[0].column_values[0].value;
-    mondayService.changeColumnValue(toBoardId, toItemId, columnId, value);
-  }
-
-  updateItem(boardId, itemId, columnId) {
-    // Get vendor column values
-    // 
-
-
-  };
-
   async requiresUpdate(itemId, columnId) {
+    // always sync if vendorColumn changes
+    if (this.vendorColumns.includes(columnId)) {
+      return true;
+    }
 
     // get current vendor values
-    const currentVendorsValues = this.getItemVendors(itemId).then(res => {
-      return Object.values(res).map(item => item.text);
-    });
-
-    // get vendor values from storage
-    const vendorsFromStorage = monday.storage.instance
-      .getItem(itemId)
+    const currentVendorsValues = await this.getItemVendors(itemId)
       .then(res => {
-        return res.data.value;
+        return [
+          res[this.vendor1Column].text,
+          res[this.vendor2Column].text,
+        ];
       });
 
-    if (vendorsFromStorage && vendorsFromStorage.some(x => x)) {
+    // get vendor values from storage (previous synced state)
+    const vendorsFromStorage = await this.getVendorsFromStorage(itemId)
+      .then(res => {
+        if (res === null) {
+          return true;
+        } else {
+          return [
+            res.vendor1.name,
+            res.vendor2.name,
+          ];
+        }
+      });
+
+    // if not in storage, vendorsFromStorage == null
+    if (vendorsFromStorage) {
       if (vendorsFromStorage !== currentVendorsValues) {
         return true;
       }
     }
+
+    // test if vendor boards have column with the same columnId
+    currentVendorsValues.forEach(vendor => {
+      const vendorBoardId = this.getVendorIdByName(vendor);
+
+      if (this.vendorBoards[vendorBoardId].columns.includes(columnId)) {
+        return true;
+      }
+    });
 
     return false;
   }
@@ -251,5 +378,21 @@ export default class VendorSyncService {
 
     // data: x[] -> { 0.id: {0}, 1.id: {1}, ... }
     return data.column_values.reduce((acc, x) => ({ ...acc, [x.id]: x }), {});
+  }
+
+  async getVendorsFromStorage(itemId) {
+    return await monday.storage.instance
+      .getItem(itemId)
+      .then(res => {
+        if (res.data.value === "[object Object]") {
+          return null;
+        }
+
+        return JSON.parse(res.data.value);
+      });
+  }
+
+  async setVendorStorage(key, value) {
+    return await monday.storage.instance.setItem(key, JSON.stringify(value));
   }
 }

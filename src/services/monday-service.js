@@ -70,6 +70,26 @@ export default class MondayService {
     }
   }
 
+  static async getItemName(itemId) {
+    try {
+      const query = `query (
+        $itemId: Int!
+      ) {
+        items (ids: [$itemId]) {
+          name
+        }
+      }`;
+      const variables = { itemId };
+
+      const response = await monday.api(query, { variables });
+
+      return response.data.items[0].name;
+
+    } catch (err) {
+      handleError(err);
+    }
+  }
+
   static async changeColumnValue(boardId, itemId, columnId, value) {
     try {
       const query = `mutation (

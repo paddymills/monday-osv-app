@@ -75,7 +75,7 @@ class App extends React.Component {
       }
 
       if (this.services.vendors.requiresUpdate(itemId, data.columnId)) {
-        // console.log(data);
+        this.services.vendors.syncOne(itemId, data.columnId);
 
         logEvent = true;
       }
