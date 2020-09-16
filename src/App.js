@@ -23,12 +23,14 @@ class App extends React.Component {
   }
 
   componentDidMount() {
+    // TODO: remove when deployed
+    console.clear();
+
     monday.listen(["settings", "context", "events"], res => {
       const { type, data } = res;
 
       switch (type) {
         case "settings":
-          this.log("Settings update:", data);
 
           // update services
           Object.values(this.services).forEach(
@@ -40,7 +42,6 @@ class App extends React.Component {
 
           break;
         case "context":
-          this.log("Context update:", data);
 
           // update services
           Object.values(this.services).forEach(
@@ -64,27 +65,18 @@ class App extends React.Component {
 
   handleEvent(res) {
     const { data } = res;
-    let logEvent = false;
 
     data.itemIds.forEach(itemId => {
 
       if (this.services.timelines.timelineDependsOn.includes(data.columnId)) {
         this.services.timelines.updateOne(itemId);
-
-        logEvent = true;
       }
 
       if (this.services.vendors.requiresUpdate(itemId, data.columnId)) {
         this.services.vendors.syncOne(itemId, data.columnId);
-
-        logEvent = true;
       }
 
     });
-
-    if (logEvent) {
-      this.log("Event fired", res);
-    }
   }
 
   log(subject, data) {
@@ -108,7 +100,7 @@ class App extends React.Component {
     return <div className={"App " + this.state.context.viewMode}>
       <h1 className="split-hidden"><u>Outside Vendor Services</u></h1>
       <button onClick={() => this.services.timelines.updateAll()}>Update Timelines</button>
-      <button onClick={() => this.services.vendors.updateAll()}>Sync Vendors</button>
+      <button onClick={() => this.services.vendors.syncAll()}>Sync Vendors</button>
       <button className="split-hidden" onClick={() => this.clickAll()}>Run All</button>
     </div>;
   }

@@ -111,7 +111,16 @@ export default class VendorSyncService {
       }
       );
 
-    console.log("vendors:", this.vendorBoards);
+    // TODO: remove before deploy
+    const data = await mondayService.getGroupItems(
+      this.boardId,
+      this.activeGroup,
+      this.vendorColumns
+    );
+
+    data.forEach(element => {
+      monday.storage.instance.deleteItem(element.id);
+    });
   }
 
   get vendors() {
@@ -120,11 +129,11 @@ export default class VendorSyncService {
   }
 
   getVendorIdByName(vendor) {
-    Object.keys(this.vendorBoards).forEach(id => {
-      if (this.vendorBoards[id].name === vendor) {
-        return id;
+    for (const [id, name] of Object.entries(this.vendors)) {
+      if (name == vendor) {
+        return Number(id);
       }
-    });
+    }
 
     return;
   }
@@ -137,15 +146,18 @@ export default class VendorSyncService {
     );
 
     data.forEach(element => {
+      let promises = Array();
       const id = Number(element.id);
 
       this.mainColumns.forEach(col => {
-        this.updateItem(id, col);
+        // TODO: only update if needed
+        promises.push(this.updateItem(id, col));
       });
     });
 
     // TODO: sync vendor statuses back to main board
 
+    Promise.allSettled(promises);
     mondayService.success("Vendor boards synced");
   }
 
@@ -190,7 +202,7 @@ export default class VendorSyncService {
     const value = await mondayService
       .getColumnValues(fromBoardId, fromItemId, [columnId])
       .then(res => {
-        return res.data.boards[0].items[0].column_values[0].value
+        return res.column_values[0].value
       });
 
     mondayService.changeColumnValue(toBoardId, toItemId, columnId, value);
@@ -220,7 +232,6 @@ export default class VendorSyncService {
     // determine if job needs added or removed from vendor boards
 
     // get vendor values from storage (previous synced state)
-    const columns = await this.getItemVendors(itemId);
     let storage = await this.getVendorsFromStorage(itemId)
       .then(res => {
         // if not in storage, init storage object
@@ -240,6 +251,8 @@ export default class VendorSyncService {
         return res;
       });
 
+    // get current vendor values
+    const columns = await this.getItemVendors(itemId);
 
     const vendorPairs = [
       [this.vendor1Column, "vendor1"],
@@ -247,52 +260,58 @@ export default class VendorSyncService {
     ];
 
     for (const [c, p] of vendorPairs) {
-      if (columns[c].text === null) {
+      if (!columns[c].text) {
         if (storage[p].id) {
           // remove from synced board
-          this.deleteFromVendor(storage[p].id);
+          this.deleteFromVendor(Number(storage[p].id));
         }
       } else if (columns[c].text !== storage[p].name) {
+        if (storage[p].id) {
+          // delete from vendor
+          this.deleteFromVendor(Number(storage[p].id));
+        }
+
         // add to vendor
         const newItemId = await this.addToVendor(itemId, columns[c].text);
 
-        // update storage object
-        storage[p] = {
-          name: columns[c].text,
-          id: newItemId,
-        };
+        if (newItemId) {
+          // update storage object
+          storage[p] = {
+            name: columns[c].text,
+            id: newItemId,
+          };
+        }
       }
     }
 
     // write storage object back to storage
     this.setVendorStorage(itemId, storage);
-
-    console.log("vendor change: ", storage);
   }
 
   async addToVendor(itemId, vendorName) {
     const vendorBoardId = this.getVendorIdByName(vendorName);
     if (!vendorBoardId) {
       mondayService.error("Vendor \"" + vendorName + "\" does not have a board");
-      return;
+      return null;
     }
 
     const itemName = await mondayService.getItemName(itemId);
 
-    const columns = this.vendorBoards[vendorBoardId]
+    const columns = this.vendorBoards[vendorBoardId].columns
       .filter(x => this.mainColumns.includes(x));
 
     const values = await mondayService
       .getColumnValues(this.boardId, itemId, columns)
       .then(res => {
-        return res.reduce((acc, x) => ({ ...acc, [x.id]: x.value }), {})
-      });
-
-    console.log("AddToVendor::getColumnValues_reduce: ", values);
+        return res.column_values
+          .filter(x => x.value)
+          .reduce((acc, x) => ({ ...acc, [x.id]: JSON.parse(x.value) }), {})
+      })
+      .then(res => JSON.stringify(res));
 
     // add item to vendor when vendor1 or vendor2 assigned
     const query = `mutation (
-        $vendorBoardId: Int,
+        $vendorBoardId: Int!,
         $itemName: String,
         $values: JSON
       ) {
@@ -305,10 +324,16 @@ export default class VendorSyncService {
         }
       }`;
     const variables = { vendorBoardId, itemName, values };
-    const res = await monday.api(query, { variables });
-    console.log("AddToVendor::add item return:", res);
 
-    return res.data.id;
+    return await monday.api(query, { variables })
+      .then(res => {
+        console.log("AddToVendor::Mutation Success:", res);
+        return res.data.create_item.id;
+      })
+      .catch(err => {
+        console.log("AddToVendor::Mutation Error:", err);
+        return null;
+      });
   }
 
   async deleteFromVendor(itemId) {
