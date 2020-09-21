@@ -130,7 +130,7 @@ export default class VendorSyncService {
 
   getVendorIdByName(vendor) {
     for (const [id, name] of Object.entries(this.vendors)) {
-      if (name == vendor) {
+      if (name === vendor) {
         return Number(id);
       }
     }
@@ -145,8 +145,8 @@ export default class VendorSyncService {
       this.vendorColumns
     );
 
+    let promises = [];
     data.forEach(element => {
-      let promises = Array();
       const id = Number(element.id);
 
       this.mainColumns.forEach(col => {
