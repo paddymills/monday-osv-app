@@ -41,8 +41,19 @@ class App extends React.Component {
 
         case "new_items":
         case "change_column_values":
+          /*
+            data:
+              - boardId: int
+              - columnId: str
+              - columnType: str
+              - ColumnValue: JSON
+              - itemIds: Array[int]
+          */
 
-          this.handleEvent(res);
+          Object.values(this.services)
+            .filter(svc => svc.eventRequiresUpdate(data.columnId))
+            .forEach(svc => data.itemIds.foreach(svc.updateOne));
+
           break;
 
         default:
@@ -51,15 +62,6 @@ class App extends React.Component {
           break;
       }
     });
-  }
-
-  handleEvent(res) {
-    const { data } = res;
-    const { items } = data;
-
-    Object.values(this.services)
-      .filter(svc => svc.requiresUpdate(data))
-      .forEach(svc => items.foreach(svc.updateOne));
   }
 
   render() {

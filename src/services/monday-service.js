@@ -31,7 +31,13 @@ export default class MondayService {
 
       const response = await monday.api(query, { variables });
 
-      return response.data.boards[0].groups[0].items;
+      return response.data.boards[0].groups[0].items
+        .map(x => {
+          return {
+            id: x.id,
+            columnValues: columnValuesToObj(x.column_values),
+          };
+        });
 
     } catch (err) {
       handleError(err);
@@ -65,7 +71,7 @@ export default class MondayService {
 
       const response = await monday.api(query, { variables });
 
-      return response.data.boards[0].items[0];
+      return columnValuesToObj(response.data.boards[0].items[0]);
 
     } catch (err) {
       handleError(err);
@@ -150,6 +156,16 @@ export default class MondayService {
       type: "error",
     });
   }
+}
+
+function columnValuesToObj(columnValues) {
+  let obj = {};
+
+  columnValues.forEach(col => {
+    obj[col.id] = col;
+  });
+
+  return obj;
 }
 
 function handleError(error) {

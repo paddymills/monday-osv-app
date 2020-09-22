@@ -7,7 +7,7 @@ const DATE_FORMAT = "YYYY-MM-DD";
 
 function getKey(obj) {
   // for items stored as key: true|false
-  // i.e. vendor1: { vendor1: true }
+  // i.e. vendor1Column: { vendor1ColumnName: true }
 
   return Object.keys(obj)[0];
 }
@@ -41,13 +41,47 @@ export default class TimelineService {
     }
   }
 
-  async requiresUpdate(data) {
+  eventRequiresUpdate(columnId) {
+    // if changed column is a timeline dependency
+    if (this.timelineDependsOn.includes(columnId)) {
+      return true;
+    }
+
+    // default: false
+    return false;
+  }
+
+  valuesRequireUpdate(data) {
+    // data should be a direct pipe of the return from mondayService.getGroupItems()
+
+    // error getting values
+    if (!data) {
+      return true;
+    }
+
+    const vals = data.columnValues;
+
+    // calculate new timeline
+    const newTimeline = this.calculateTimeline(
+      vals[this.shipDateColumn].text,
+      vals[this.vendor2Column].text,
+    );
+
+    if (newTimeline !== JSON.parse(vals[this.timelineColumn].value)) {
+      return true;
+    }
 
     return false;
   }
 
   async updateAll() {
+    const data = mondayService.getGroupItems(
+      this.boardId, this.activeGroup, this.timelineCalcColumns
+    );
 
+    data
+      .filter(x => this.valuesRequireUpdate(x))
+      .forEach(x => this.updateItem(x));
 
     mondayService.success("Timelines updated");
   };
@@ -59,29 +93,20 @@ export default class TimelineService {
     this.updateItem(itemId, data);
   }
 
-  updateItem(itemId, data) {
-    let vals = {};
-    data.column_values.forEach(col => {
-      vals[col.id] = col;
-    });
+  updateItem(data) {
+    const vals = data.columnValues;
 
-    const date = vals[this.shipDateColumn].text;
     const newTimeline = this.calculateTimeline(
-      date,
-      vals[this.vendor2Column].text,
-      this.vendor1Days,
-      this.vendor2Days,
-      this.extraDays
+      vals[this.shipDateColumn].text,
+      vals[this.vendor2Column].text
     );
 
-    if (newTimeline !== JSON.parse(vals[this.timelineColumn].value)) {
-      mondayService.changeColumnValue(
-        this.boardId,
-        itemId,
-        this.timelineColumn,
-        newTimeline
-      );
-    }
+    mondayService.changeColumnValue(
+      this.boardId,
+      data.id,
+      this.timelineColumn,
+      newTimeline
+    );
   };
 
   calculateTimeline(shipDate, vendor2) {
