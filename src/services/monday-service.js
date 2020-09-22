@@ -35,6 +35,8 @@ export default class MondayService {
 
     } catch (err) {
       handleError(err);
+
+      return [];
     }
   }
 
@@ -67,6 +69,8 @@ export default class MondayService {
 
     } catch (err) {
       handleError(err);
+
+      return [];
     }
   }
 
@@ -87,6 +91,8 @@ export default class MondayService {
 
     } catch (err) {
       handleError(err);
+
+      return null;
     }
   }
 
