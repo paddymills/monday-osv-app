@@ -6,53 +6,55 @@ var moment = require('moment');
 const DATE_FORMAT = "YYYY-MM-DD";
 
 function getKey(obj) {
+  // for items stored as key: true|false
+  // i.e. vendor1: { vendor1: true }
+
   return Object.keys(obj)[0];
 }
 
 export default class TimelineService {
-  updateSettings(settings) {
-    this.activeGroup = settings.activeGroup;
+  updateConfig(updateType, updateData) {
+    switch (updateType) {
+      case "settings":
+        this.activeGroup = updateData.activeGroup;
 
-    this.timelineColumn = getKey(settings.timelineColumn);
-    this.shipDateColumn = getKey(settings.shipDateColumn);
-    this.vendor1Column = getKey(settings.vendor1Column);
-    this.vendor2Column = getKey(settings.vendor2Column);
+        this.timelineColumn = getKey(updateData.timelineColumn);
+        this.shipDateColumn = getKey(updateData.shipDateColumn);
+        this.vendor1Column = getKey(updateData.vendor1Column);
+        this.vendor2Column = getKey(updateData.vendor2Column);
 
-    // timeline values
-    this.vendor1Days = Number(settings.vendor1Days);
-    this.vendor2Days = Number(settings.vendor2Days);
-    this.extraDays = Number(settings.extraDays);
+        // timeline values
+        this.vendor1Days = Number(updateData.vendor1Days);
+        this.vendor2Days = Number(updateData.vendor2Days);
+        this.extraDays = Number(updateData.extraDays);
 
-    this.timelineDependsOn = [this.shipDateColumn, this.vendor2Column];
-    this.timelineCalcColumns = [this.shipDateColumn, this.vendor2Column, this.timelineColumn];
+        this.timelineDependsOn = [this.shipDateColumn, this.vendor2Column];
+        this.timelineCalcColumns = [this.shipDateColumn, this.vendor2Column, this.timelineColumn];
+
+        break;
+      case "context":
+        this.boardId = updateData.boardId;
+
+        break;
+      default:
+        break;
+    }
   }
 
-  updateContext(context) {
-    this.boardId = context.boardId;
+  async requiresUpdate(data) {
+
+    return false;
   }
 
   async updateAll() {
-    const data = await mondayService.getGroupItems(
-      this.boardId,
-      this.activeGroup,
-      this.timelineCalcColumns,
-    );
 
-    data.forEach(element => {
-      const id = Number(element.id);
-
-      this.updateItem(id, element);
-    });
 
     mondayService.success("Timelines updated");
   };
 
   async updateOne(itemId) {
-    const data = await mondayService.getColumnValues(
-      this.boardId,
-      itemId,
-      this.timelineCalcColumns
-    );
+    let data = {};
+
 
     this.updateItem(itemId, data);
   }

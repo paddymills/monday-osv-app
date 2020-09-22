@@ -1,7 +1,7 @@
 import React from "react";
 import "./App.scss";
 import timelineService from "./services/timeline-service.js";
-import vendorService from "./services/vendor-service.js";
+// import vendorService from "./services/vendor-service.js";
 import mondaySdk from "monday-sdk-js";
 const monday = mondaySdk();
 
@@ -9,17 +9,13 @@ class App extends React.Component {
   constructor(props) {
     super(props);
 
-    // Default state
-    this.state = {
-      settings: {},
-      context: {},
-    };
-
     // init services
     this.services = {
-      vendors: new vendorService(),
       timelines: new timelineService(),
     };
+
+    // init state
+    this.state = {};
   }
 
   componentDidMount() {
@@ -31,33 +27,27 @@ class App extends React.Component {
 
       switch (type) {
         case "settings":
-
-          // update services
-          Object.values(this.services).forEach(
-            service => service.updateSettings(data)
-          );
-
-          // store in state
-          this.setState({ settings: data });
-
-          break;
         case "context":
 
           // update services
           Object.values(this.services).forEach(
-            service => service.updateContext(data)
+            service => service.updateConfig(type, data)
           );
 
-          // store in state
-          this.setState({ context: data });
+          // update state
+          this.setState(data);
 
           break;
+
         case "new_items":
         case "change_column_values":
+
           this.handleEvent(res);
           break;
+
         default:
-          this.log("Unhandled event received", res)
+          const date = new Date().toISOString();
+          console.log("[" + date + "] Unhandled event received\n", res);
           break;
       }
     });
@@ -65,43 +55,18 @@ class App extends React.Component {
 
   handleEvent(res) {
     const { data } = res;
+    const { items } = data;
 
-    data.itemIds.forEach(itemId => {
-
-      if (this.services.timelines.timelineDependsOn.includes(data.columnId)) {
-        this.services.timelines.updateOne(itemId);
-      }
-
-      if (this.services.vendors.requiresUpdate(itemId, data.columnId)) {
-        this.services.vendors.syncOne(itemId, data.columnId);
-      }
-
-    });
-  }
-
-  log(subject, data) {
-    const date = new Date().toISOString();
-
-    console.log("[" + date + "] " + subject + "\n", data);
-  }
-
-  clickAll() {
-    Object.values(this.services).forEach(
-      service => service.updateAll()
-    );
-
-    monday.execute("notice", {
-      message: "Timelines updated & Vendor boards synced",
-      type: "success",
-    });
+    Object.values(this.services)
+      .filter(svc => svc.requiresUpdate(data))
+      .forEach(svc => items.foreach(svc.updateOne));
   }
 
   render() {
-    return <div className={"App " + this.state.context.viewMode}>
+    return <div className={"App " + this.state.viewMode}>
       <h1 className="split-hidden"><u>Outside Vendor Services</u></h1>
       <button onClick={() => this.services.timelines.updateAll()}>Update Timelines</button>
-      <button onClick={() => this.services.vendors.syncAll()}>Sync Vendors</button>
-      <button className="split-hidden" onClick={() => this.clickAll()}>Run All</button>
+      {/* <button onClick={() => this.services.vendors.syncAll()}>Sync Vendors</button> */}
     </div>;
   }
 }
