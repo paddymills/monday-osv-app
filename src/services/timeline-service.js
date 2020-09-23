@@ -95,7 +95,7 @@ export default class TimelineService {
       .filter(x => this.valuesRequireUpdate(x))
       .map(x => this.updateItem(x));
 
-    await Promise.all(updatePromises);
+    await Promise.allSettled(updatePromises);
 
     mondayService.success("Timelines updated");
   };
@@ -112,7 +112,6 @@ export default class TimelineService {
     await mondayService.getColumnValues(
       this.boardId, itemId, this.timelineCalcColumns
     ).then(x => this.updateItem(x));
-
 
     mondayService.success("Timeline updated");
   }
