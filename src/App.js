@@ -1,6 +1,6 @@
 import React from "react";
 import "./App.scss";
-import timelineService from "./services/timeline-service.js";
+import TimelineService from "./services/timeline-service.js";
 // import vendorService from "./services/vendor-service.js";
 import mondaySdk from "monday-sdk-js";
 const monday = mondaySdk();
@@ -11,7 +11,7 @@ class App extends React.Component {
 
     // init services
     this.services = {
-      timelines: new timelineService(),
+      timelines: new TimelineService(),
     };
 
     // init state
@@ -52,7 +52,9 @@ class App extends React.Component {
 
           Object.values(this.services)
             .filter(svc => svc.eventRequiresUpdate(data.columnId))
-            .forEach(svc => data.itemIds.forEach(svc.updateOne));
+            .forEach(svc => data.itemIds.forEach(
+              x => svc.updateOne(x)
+            ));
 
           break;
 

@@ -85,7 +85,7 @@ export default class TimelineService {
       this.boardId, this.activeGroup, this.timelineCalcColumns
     );
 
-    const res = data
+    const updatePromises = data
       .map(x => {
         return {
           id: x.id,
@@ -93,9 +93,9 @@ export default class TimelineService {
         };
       })
       .filter(x => this.valuesRequireUpdate(x))
-      .forEach(this.updateItem);
+      .map(x => this.updateItem(x));
 
-    await Promise.all(res);
+    await Promise.all(updatePromises);
 
     mondayService.success("Timelines updated");
   };
@@ -111,7 +111,8 @@ export default class TimelineService {
 
     await mondayService.getColumnValues(
       this.boardId, itemId, this.timelineCalcColumns
-    ).then(res => this.updateItem(res));
+    ).then(x => this.updateItem(x));
+
 
     mondayService.success("Timeline updated");
   }
@@ -121,11 +122,10 @@ export default class TimelineService {
     if (Array.isArray(data.column_values)) {
       data.column_values = columnValuesToObj(data.column_values)
     }
-    const vals = data.column_values;
 
     const newTimeline = this.calculateTimeline(
-      vals[this.shipDateColumn].text,
-      vals[this.vendor2Column].text
+      data.column_values[this.shipDateColumn].text,
+      data.column_values[this.vendor2Column].text
     );
 
     return mondayService.changeColumnValue(
@@ -134,7 +134,7 @@ export default class TimelineService {
       this.timelineColumn,
       JSON.stringify(newTimeline)
     );
-  };
+  }
 
   calculateTimeline(shipDate, vendor2) {
     let date = moment(shipDate);

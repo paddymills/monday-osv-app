@@ -31,7 +31,15 @@ export default class MondayService {
 
       const response = await monday.api(query, { variables });
 
-      return response.data.boards[0].groups[0].items;
+      const items = response.data.boards[0].items[0]
+        .map(item => {
+          return {
+            id: Number(item.id),
+            column_values: item.column_values
+          }
+        });
+
+      return items;
 
     } catch (err) {
       handleError(err);
@@ -66,7 +74,10 @@ export default class MondayService {
 
       const response = await monday.api(query, { variables });
 
-      return response.data.boards[0].items[0];
+      let item = response.data.boards[0].items[0];
+      item.id = Number(item.id)
+
+      return item;
 
     } catch (err) {
       handleError(err);
