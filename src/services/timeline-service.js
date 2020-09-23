@@ -1,16 +1,10 @@
 
 import mondayService from "./monday-service.js"
+import { columnValuesToObj, getKey } from "./utils.js"
 
 var moment = require('moment');
 
 const DATE_FORMAT = "YYYY-MM-DD";
-
-function getKey(obj) {
-  // for items stored as key: true|false
-  // i.e. vendor1Column: { vendor1ColumnName: true }
-
-  return Object.keys(obj)[0];
-}
 
 export default class TimelineService {
   updateConfig(updateType, updateData) {
@@ -59,15 +53,17 @@ export default class TimelineService {
       return true;
     }
 
-    const vals = data.columnValues;
-
     // calculate new timeline
     const newTimeline = this.calculateTimeline(
-      vals[this.shipDateColumn].text,
-      vals[this.vendor2Column].text,
+      data.column_values[this.shipDateColumn].text,
+      data.column_values[this.vendor2Column].text,
     );
 
-    if (newTimeline !== JSON.parse(vals[this.timelineColumn].value)) {
+    // test that new timeline is different from current
+    // only look at 'from' and 'to', db might store other values in JSON
+    const parsedCurrentTimeline = JSON.parse(data.column_values[this.timelineColumn].value);
+    const currentTimeline = { "from": parsedCurrentTimeline.from, "to": parsedCurrentTimeline.to };
+    if (newTimeline.from !== currentTimeline) {
       return true;
     }
 
@@ -79,9 +75,17 @@ export default class TimelineService {
       this.boardId, this.activeGroup, this.timelineCalcColumns
     );
 
-    data
+    const res = data
+      .map(x => {
+        return {
+          id: x.id,
+          column_values: columnValuesToObj(x.column_values),
+        };
+      })
       .filter(x => this.valuesRequireUpdate(x))
       .forEach(x => this.updateItem(x));
+
+    await Promise.all(res);
 
     mondayService.success("Timelines updated");
   };
@@ -93,19 +97,19 @@ export default class TimelineService {
     this.updateItem(itemId, data);
   }
 
-  updateItem(data) {
-    const vals = data.columnValues;
+  async updateItem(data) {
+    const vals = data.column_values;
 
     const newTimeline = this.calculateTimeline(
       vals[this.shipDateColumn].text,
       vals[this.vendor2Column].text
     );
 
-    mondayService.changeColumnValue(
+    return mondayService.changeColumnValue(
       this.boardId,
       data.id,
       this.timelineColumn,
-      newTimeline
+      JSON.stringify(newTimeline)
     );
   };
 
@@ -123,9 +127,6 @@ export default class TimelineService {
     let start = date.subtract(subtractDays, 'days').format(DATE_FORMAT);
     let end = date.add(this.vendor1Days, 'days').format(DATE_FORMAT);
 
-    return JSON.stringify({
-      "from": start,
-      "to": end
-    });
+    return { "from": start, "to": end };
   }
 }
