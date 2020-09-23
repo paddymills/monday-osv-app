@@ -52,7 +52,7 @@ class App extends React.Component {
 
           Object.values(this.services)
             .filter(svc => svc.eventRequiresUpdate(data.columnId))
-            .forEach(svc => data.itemIds.foreach(svc.updateOne));
+            .forEach(svc => data.itemIds.forEach(svc.updateOne));
 
           break;
 
