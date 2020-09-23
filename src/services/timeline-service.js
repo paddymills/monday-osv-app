@@ -71,6 +71,16 @@ export default class TimelineService {
   }
 
   async updateAll() {
+    /*
+      no validation check has been done
+      need to:
+        - get all main group items
+        - iterate over all items:
+          - filter out items that don't need updates
+          - update what is left
+        - await all updates to complete
+    */
+
     const data = mondayService.getGroupItems(
       this.boardId, this.activeGroup, this.timelineCalcColumns
     );
@@ -83,7 +93,7 @@ export default class TimelineService {
         };
       })
       .filter(x => this.valuesRequireUpdate(x))
-      .forEach(x => this.updateItem(x));
+      .forEach(this.updateItem);
 
     await Promise.all(res);
 
@@ -91,13 +101,29 @@ export default class TimelineService {
   };
 
   async updateOne(itemId) {
-    let data = {};
+    /* 
+      update validation check already via eventRequiresUpdate
+      just
+        - get values
+        - calculate timeline
+        - update
+    */
+
+    await mondayService.getColumnValues(
+      this.boardId, itemId, this.timelineCalcColumns
+    ).then(res => this.updateItem(res));
+
+    mondayService.success("Timeline updated");
 
 
     this.updateItem(itemId, data);
   }
 
   async updateItem(data) {
+    // ensure column_values is flattened into an object
+    if (Array.isArray(data.column_values)) {
+      data.column_values = columnValuesToObj(data.column_values)
+    }
     const vals = data.column_values;
 
     const newTimeline = this.calculateTimeline(

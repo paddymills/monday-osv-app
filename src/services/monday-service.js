@@ -49,6 +49,7 @@ export default class MondayService {
       ) {
         boards (ids: [$boardId]) {
           items (ids: [$itemId]) {
+            id,
             column_values (ids: $columns) {
               id,
               value,
