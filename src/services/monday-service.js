@@ -31,7 +31,7 @@ export default class MondayService {
 
       const response = await monday.api(query, { variables });
 
-      const items = response.data.boards[0].items[0]
+      const items = response.data.boards[0].groups[0].items
         .map(item => {
           return {
             id: Number(item.id),

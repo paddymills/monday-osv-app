@@ -81,7 +81,7 @@ export default class TimelineService {
         - await all updates to complete
     */
 
-    const data = mondayService.getGroupItems(
+    const data = await mondayService.getGroupItems(
       this.boardId, this.activeGroup, this.timelineCalcColumns
     );
 

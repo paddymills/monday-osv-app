@@ -19,9 +19,6 @@ class App extends React.Component {
   }
 
   componentDidMount() {
-    // TODO: remove when deployed
-    console.clear();
-
     monday.listen(["settings", "context", "events"], res => {
       const { type, data } = res;
 
