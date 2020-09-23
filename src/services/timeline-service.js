@@ -114,9 +114,6 @@ export default class TimelineService {
     ).then(res => this.updateItem(res));
 
     mondayService.success("Timeline updated");
-
-
-    this.updateItem(itemId, data);
   }
 
   async updateItem(data) {
