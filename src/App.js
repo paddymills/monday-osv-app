@@ -1,7 +1,6 @@
 import React from "react";
 import "./App.scss";
-import TimelineService from "./services/timeline-service.js";
-// import vendorService from "./services/vendor-service.js";
+import VendorService from "./services/vendor-service.js";
 import mondaySdk from "monday-sdk-js";
 const monday = mondaySdk();
 
@@ -11,7 +10,7 @@ class App extends React.Component {
 
     // init services
     this.services = {
-      timelines: new TimelineService(),
+      vendors: new VendorService(),
     };
 
     // init state
@@ -66,8 +65,7 @@ class App extends React.Component {
   render() {
     return <div className={"App " + this.state.viewMode}>
       <h1 className="split-hidden"><u>Outside Vendor Services</u></h1>
-      <button onClick={() => this.services.timelines.updateAll()}>Update Timelines</button>
-      {/* <button onClick={() => this.services.vendors.syncAll()}>Sync Vendors</button> */}
+      <button onClick={() => this.services.vendors.syncAll()}>Sync Vendors</button>1
     </div>;
   }
 }
