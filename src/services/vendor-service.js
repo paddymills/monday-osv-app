@@ -1,11 +1,8 @@
 
 import mondayService from "./monday-service.js";
 import mondaySdk from "monday-sdk-js";
+import { columnValuesToObj, getKey } from "./utils.js"
 const monday = mondaySdk();
-
-function getKey(obj) {
-  return Object.keys(obj)[0];
-}
 
 export default class VendorSyncService {
   constructor() {
@@ -43,8 +40,20 @@ export default class VendorSyncService {
     }
   }
 
+  async init() {
+    /*
+      - get vendor boards
+      - *vendor board class*
+    */
+  }
+
   eventRequiresUpdate(columnId) {
-    // determine an event fires an update
+    /*
+      determine an event fires an update
+        - Get item from vendor boards
+        - Determine if columnId is a synced column
+        - *might need to adjust API since itemId will be needed*
+    */
 
     // default: false
     return false;
@@ -54,23 +63,62 @@ export default class VendorSyncService {
     // data should be a direct pipe of the return
     // from mondayService.getGroupItems()
 
+    // error getting values
+    if (!data) {
+      return true;
+    }
+
+    // find items in vendor boards
+    // determine if items need upate
+    // determine if item needs to be added to a board
+    // determine if item needs to be removed from a board
+
     return false;
   }
 
   async updateAll() {
+    /*
+      no validation check has been done
+      need to:
+        - get all main group items
+        - iterate over all items:
+          - filter out items that don't need updates
+          - update what is left
+        - await all updates to complete
+    */
 
+    const items = mondayService.getGroupItems(
+      this.boardId, this.activeGroup, this.vendorColumns
+    );
+
+    const updatePromises = items
+      .map(x => {
+        return {
+          id: x.id,
+          column_values: columnValuesToObj(x.column_values),
+        };
+      })
+      .filter(x => this.valuesRequireUpdate(x))
+      .map(x => this.updateItem(x));
+
+    await Promise.allSettled(updatePromises);
 
     mondayService.success("All items synced");
   }
 
   async updateOne(data) {
-
+    // update synced pulses
 
     mondayService.success("Item synced");
   }
 
-  async addItem(data) {
+  async addItem(data, boardId) {
+    // add item to board
+    // set column values
+  }
 
+  async deleteItem(itemId) {
+    // delete item from board
   }
 
   async updateItem(data) {
